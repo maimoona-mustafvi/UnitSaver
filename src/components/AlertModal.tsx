@@ -61,7 +61,10 @@ export function AlertModal({ close }: { close: () => void }) {
                 <span>Writing tips for you…</span>
               </div>
             )}
-            {tips.result?.tips.slice(0, 2).map((t) => (
+            {tips.result?.tips
+              .filter((t) => prediction.dailyBudget === null || !/units a day/i.test(t)) // budget line above already says it
+              .slice(0, 2)
+              .map((t) => (
               <div key={t}>
                 <i>⌁</i>
                 <span>

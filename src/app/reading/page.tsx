@@ -126,6 +126,7 @@ export default function ReadingPage() {
                 onChange={(e) => {
                   setValue(e.target.value.replace(/\D/g, ""));
                   setFromAI(false);
+                  setEditing(true);
                 }}
               />
             ) : (
