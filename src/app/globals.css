@@ -2171,3 +2171,15 @@ a.button,
   font-size: 10px;
   opacity: 0.6;
 }
+.charge-card {
+  padding-bottom: 72px;
+}
+.charge-how {
+  display: block;
+  font-size: 10px;
+  opacity: 0.65;
+  margin-top: 3px;
+}
+.charge-row b {
+  white-space: nowrap;
+}
