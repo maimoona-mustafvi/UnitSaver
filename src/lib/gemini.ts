@@ -2,7 +2,7 @@ import "server-only";
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 
-export const geminiModel = process.env.GEMINI_MODEL || "gemini-flash-latest";
+export const geminiModel = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 
 export class InputError extends Error {}
 export class GeminiUnavailable extends Error {}

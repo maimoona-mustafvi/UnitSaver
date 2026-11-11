@@ -50,7 +50,7 @@ Most families only find out when the bill arrives. Bills are also hard to read: 
 
 | Where | Model / service | What it does |
 |---|---|---|
-| `/api/read-bill` | Gemini Flash (`GEMINI_MODEL`, default `gemini-flash-latest`) | Reads a bill photo or PDF into structured JSON (no names, addresses, CNIC or reference numbers). |
+| `/api/read-bill` | Gemini 3.8 Flash (`GEMINI_MODEL`, default `gemini-3.8-flash`) | Reads a bill photo or PDF into structured JSON (no names, addresses, CNIC or reference numbers). |
 | `/api/read-meter` | Gemini Flash | Reads the kWh digits from a meter photo, with a confidence level. |
 | `/api/tips` | Gemini Flash | Writes 3 short, personalised saving tips. |
 | Auth / DB | Firebase Anonymous Auth, Cloud Firestore | Per-device anonymous account and data. |
@@ -81,7 +81,7 @@ pnpm dev                     # http://localhost:3000
 | Variable | Where to get it |
 |---|---|
 | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey). Server-only. |
-| `GEMINI_MODEL` | Optional. Defaults to `gemini-flash-latest`. |
+| `GEMINI_MODEL` | Optional. Defaults to `gemini-3.8-flash` (the `gemini-flash-latest` alias and `gemini-2.5-flash` are not available to new API keys). |
 | `NEXT_PUBLIC_FIREBASE_*` | Firebase console → Project settings → Your apps → Web app config. |
 
 Firebase console steps:
