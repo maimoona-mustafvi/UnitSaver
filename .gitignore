@@ -6,3 +6,6 @@ next-env.d.ts
 .env*.local
 .env
 .firebase/
+
+# Presentation decks (kept local, not pushed)
+*.pptx
