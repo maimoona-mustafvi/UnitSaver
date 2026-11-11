@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useData } from "@/components/DataProvider";
 import { SetupPrompt } from "@/components/SetupPrompt";
+import { TipsCard } from "@/components/TipsCard";
 import { Button, Card, Gauge, Loading, Unity, num, rs } from "@/components/ui";
 import { formatDate, monthLabel } from "@/lib/dates";
 
@@ -98,6 +99,7 @@ export default function DashboardPage() {
               : "Snap your meter to see your impact"}
           </span>
         </Card>
+        <TipsCard />
       </div>
       <p className="legal-note">Estimate based on current NEPRA tariffs. Actual bill may vary.</p>
     </>
