@@ -51,5 +51,7 @@ export function errorResponse(e: unknown) {
   if (e instanceof InputError) return Response.json({ error: e.message }, { status: 400 });
   console.error("[gemini]", e);
   if (e instanceof GeminiUnavailable) return Response.json({ error: "AI reading is not configured. Please enter the values manually." }, { status: 503 });
+  if (/API key not valid|UNAUTHENTICATED|PERMISSION_DENIED/.test(String(e)))
+    return Response.json({ error: "The Gemini API key is invalid. Check GEMINI_API_KEY, or enter the values manually." }, { status: 503 });
   return Response.json({ error: "We couldn't read it clearly. Try again or enter manually." }, { status: 502 });
 }
