@@ -1,0 +1,10 @@
+{
+  "description": "Track electricity use and estimated bills for Pakistani households, stay under 200 units, and get personalized tips to save money and reduce energy waste.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

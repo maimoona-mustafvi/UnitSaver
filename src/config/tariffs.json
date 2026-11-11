@@ -1,0 +1,42 @@
+{
+  "source": "IESCO residential A-1(a). 401-500 slab, fixed charge, FC, QTR and FPA rates taken from a real July 2024 IESCO bill (reference test). Every other slab rate, the income-tax rule and the grid emission factor are best-known values that MUST be verified against the latest NEPRA notification before production use.",
+  "verified": false,
+  "protected": {
+    "slabs": [
+      { "upTo": 100, "rate": 7.74 },
+      { "upTo": 200, "rate": 10.06 }
+    ],
+    "fixedCharges": [
+      { "upTo": 100, "amount": 0 },
+      { "upTo": 200, "amount": 0 }
+    ]
+  },
+  "nonProtected": {
+    "slabs": [
+      { "upTo": 100, "rate": 22.44 },
+      { "upTo": 200, "rate": 28.91 },
+      { "upTo": 300, "rate": 33.1 },
+      { "upTo": 400, "rate": 37.99 },
+      { "upTo": 500, "rate": 38.912 },
+      { "upTo": 600, "rate": 41.62 },
+      { "upTo": 700, "rate": 42.76 },
+      { "upTo": null, "rate": 47.69 }
+    ],
+    "fixedCharges": [
+      { "upTo": 200, "amount": 0 },
+      { "upTo": null, "amount": 240 }
+    ]
+  },
+  "fcSurchargePerUnit": 3.23,
+  "qtrPerUnit": 2.4154,
+  "fpaPerUnit": 3.3287,
+  "edPct": 0.015,
+  "gstPct": 0.18,
+  "tvFee": 35,
+  "lpsPct": 0.1,
+  "incomeTax": { "nonFilerPct": 0.075, "billThreshold": 25000 },
+  "protectedLimit": 200,
+  "protectedMonths": 6,
+  "gridEmissionFactor": 0.5,
+  "gridEmissionFactorSource": "Mid-range of published Pakistan grid estimates (0.48-0.57 kg CO2/kWh, CDM baseline studies). Verify against Pakistan's latest UNFCCC BUR / NEPRA data."
+}
