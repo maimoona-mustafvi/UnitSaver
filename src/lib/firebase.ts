@@ -1,5 +1,15 @@
 import { getApps, initializeApp } from "firebase/app";
-import { getAuth, onAuthStateChanged, signInAnonymously, type User } from "firebase/auth";
+import {
+  GoogleAuthProvider,
+  getAuth,
+  linkWithPopup,
+  onIdTokenChanged,
+  signInAnonymously,
+  signInWithCredential,
+  signInWithPopup,
+  signOut,
+  type User,
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // Each NEXT_PUBLIC_ var must be referenced literally so Next.js inlines it into the client bundle.
@@ -20,18 +30,39 @@ export function getFirebase() {
   return { auth: getAuth(app), db: getFirestore(app) };
 }
 
-/** Resolves with the signed-in user, signing in anonymously the first time. */
-export function ensureUser(): Promise<User> {
+/** Fires on sign-in, sign-out and when a guest is upgraded to Google (same uid, new token). */
+export const watchUser = (cb: (user: User | null) => void) => onIdTokenChanged(getFirebase().auth, cb);
+
+export const continueAsGuest = () => signInAnonymously(getFirebase().auth);
+
+export const signOutUser = () => signOut(getFirebase().auth);
+
+/** Google sign-in. A guest is upgraded in place (same uid), so everything they saved as a guest is kept. */
+export async function signInWithGoogle() {
   const { auth } = getFirebase();
-  return new Promise((resolve, reject) => {
-    const stop = onAuthStateChanged(
-      auth,
-      (user) => {
-        stop();
-        if (user) resolve(user);
-        else signInAnonymously(auth).then((c) => resolve(c.user), reject);
-      },
-      reject,
-    );
-  });
+  const provider = new GoogleAuthProvider();
+  const current = auth.currentUser;
+  if (!current?.isAnonymous) return signInWithPopup(auth, provider);
+  try {
+    const result = await linkWithPopup(current, provider);
+    await result.user.getIdToken(true); // makes onIdTokenChanged report the upgraded (non-anonymous) user
+    return result;
+  } catch (e) {
+    // This Google account already has UnitSaver data: switch to it (the guest's data stays with the guest).
+    const code = (e as { code?: string }).code;
+    const credential = code === "auth/credential-already-in-use" ? GoogleAuthProvider.credentialFromError(e as never) : null;
+    if (credential) return signInWithCredential(auth, credential);
+    throw e;
+  }
+}
+
+/** Friendly message for Firebase auth errors; null when the user just closed the popup. */
+export function authErrorMessage(e: unknown): string | null {
+  const code = (e as { code?: string }).code ?? "";
+  if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return null;
+  if (code === "auth/operation-not-allowed") return "This sign-in method is not enabled in Firebase Authentication.";
+  if (code === "auth/popup-blocked") return "The sign-in popup was blocked. Allow popups for this site and try again.";
+  if (code === "auth/unauthorized-domain") return "This website's domain is not authorised in Firebase Authentication settings.";
+  if (code === "auth/network-request-failed") return "No internet connection. Please try again.";
+  return "Sign-in failed. Please try again.";
 }

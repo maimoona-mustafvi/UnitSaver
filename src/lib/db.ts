@@ -10,7 +10,7 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import { DEFAULT_SETTINGS, type Appliance, type Reading, type UserData } from "@/types";
-import { ensureUser, firebaseConfigured, getFirebase } from "@/lib/firebase";
+import { getFirebase } from "@/lib/firebase";
 
 export type Profile = Partial<Pick<UserData, "settings" | "history" | "lastBill">>;
 export type NewAppliance = Omit<Appliance, "id"> & { id?: string };
@@ -42,9 +42,8 @@ const withDefaults = (d: Partial<UserData>): UserData => ({
 
 /* ---------- Firestore: users/{uid} + readings/appliances subcollections ---------- */
 
-async function firestoreStore(): Promise<Store> {
+export function firestoreStore(uid: string): Store {
   const { db } = getFirebase();
-  const { uid } = await ensureUser();
   const userRef = doc(db, "users", uid);
   const readingsRef = collection(userRef, "readings");
   const appliancesRef = collection(userRef, "appliances");
@@ -94,7 +93,7 @@ async function firestoreStore(): Promise<Store> {
 
 const KEY = "unitsaver:data";
 
-function localStore(): Store {
+export function localStore(): Store {
   const read = (): UserData => {
     try {
       return withDefaults(JSON.parse(localStorage.getItem(KEY) ?? "{}"));
@@ -128,18 +127,3 @@ function localStore(): Store {
   };
 }
 
-/** Firestore when configured and reachable; otherwise this device's storage so the demo never breaks. */
-export async function openStore(): Promise<{ store: Store; data: UserData; warning?: string }> {
-  if (firebaseConfigured) {
-    try {
-      const store = await firestoreStore();
-      return { store, data: await store.load() };
-    } catch (e) {
-      console.error("Firestore unavailable, using local storage", e);
-      const store = localStore();
-      return { store, data: await store.load(), warning: "Cloud sync is unavailable. Your data is saved on this device." };
-    }
-  }
-  const store = localStore();
-  return { store, data: await store.load() };
-}

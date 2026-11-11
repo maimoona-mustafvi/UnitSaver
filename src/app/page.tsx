@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Button, C, Card, Unity } from "@/components/ui";
+import { HeaderAuth, HeroAuth } from "@/components/AuthActions";
+import { C, Card, Unity } from "@/components/ui";
 
 const features = [
   { title: "Snap & Calculate", color: C.lime, text: "A photo is all it takes.", icon: "◉" },
@@ -25,9 +26,7 @@ export default function Landing() {
           <a href="#features">Features</a>
           <a href="#how">How it works</a>
         </nav>
-        <Button variant="white" href="/dashboard">
-          Open app
-        </Button>
+        <HeaderAuth />
       </header>
       <main>
         <section className="hero">
@@ -35,9 +34,7 @@ export default function Landing() {
             <div className="eyebrow">Pakistan&apos;s friendly energy coach</div>
             <h1>Save every unit with UnitSaver</h1>
             <p>Track your units, know your bill before it arrives, and stay protected under 200 units.</p>
-            <Button variant="lime" href="/setup">
-              Get Started <span>→</span>
-            </Button>
+            <HeroAuth />
           </div>
           <div className="hero-art">
             <div className="hello-burst">HELLO!</div>

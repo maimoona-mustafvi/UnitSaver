@@ -41,7 +41,7 @@ function greeting() {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname();
-  const { summary, warning } = useData();
+  const { summary, warning, user } = useData();
   const [manualOpen, setManualOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   // summary only exists on the client (data loads after mount), so reading sessionStorage here is hydration-safe.
@@ -95,7 +95,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               ♢{summary?.alert && <i />}
             </button>
             <Link className="avatar" href="/settings" aria-label="Settings">
-              ME
+              {user?.photo ? (
+                // eslint-disable-next-line @next/next/no-img-element -- Google avatar URL
+                <img src={user.photo} alt="" referrerPolicy="no-referrer" />
+              ) : (
+                (user?.name?.[0] ?? "ME").toUpperCase()
+              )}
             </Link>
           </div>
         </header>

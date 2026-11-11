@@ -3,9 +3,18 @@
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import tariffs from "@/config/tariffs.json";
+import { authErrorMessage } from "@/lib/firebase";
 import { useData } from "@/components/DataProvider";
 import { Card, Loading, Notice } from "@/components/ui";
 import type { Settings } from "@/types";
+
+const initials = (name?: string | null) =>
+  name
+    ?.split(/s+/)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase() || "ME";
 
 const COMPANIES = ["IESCO", "LESCO", "FESCO", "GEPCO", "MEPCO", "PESCO", "HESCO", "SEPCO", "QESCO", "TESCO"];
 
@@ -22,7 +31,7 @@ function Row({ title, hint, children }: { title: string; hint: string; children:
 }
 
 export default function SettingsPage() {
-  const { loading, data, store, run, loadDemo, reset } = useData();
+  const { loading, data, store, run, loadDemo, reset, user, authEnabled, signInGoogle, signOut } = useData();
   const [status, setStatus] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
   if (loading || !data) return <Loading />;
@@ -42,14 +51,57 @@ export default function SettingsPage() {
   return (
     <>
       <Card className="profile-banner">
-        <div className="profile-photo">ME</div>
+        <div className="profile-photo">
+          {/* eslint-disable-next-line @next/next/no-img-element -- Google avatar URL, no image optimisation needed */}
+          {user?.photo ? <img src={user.photo} alt="" referrerPolicy="no-referrer" /> : initials(user?.name)}
+        </div>
         <div>
-          <h2>Your household</h2>
-          <p>{store?.mode === "firebase" ? "Anonymous account · synced with Firebase" : "Saved on this device only"}</p>
+          <h2>{user && !user.isGuest ? (user.name ?? user.email) : "Your household"}</h2>
+          <p>
+            {store?.mode !== "firebase"
+              ? "Saved on this device only"
+              : user?.isGuest
+                ? "Guest account · synced with Firebase"
+                : `${user?.email ?? ""} · synced with Firebase`}
+          </p>
           <b>{s.company} customer</b>
         </div>
         <button onClick={() => loadDemo().then(() => setStatus("Demo data loaded"))}>Load demo data</button>
       </Card>
+      {authEnabled && user && (
+        <Card className="settings-list">
+          <h2>Account</h2>
+          {user.isGuest ? (
+            <div className="setting-row">
+              <span>
+                <b>Sign in with Google</b>
+                <small>Keep your data safe and use it on any device. Nothing you saved as a guest is lost.</small>
+              </span>
+              <button
+                className="button blue"
+                onClick={() =>
+                  signInGoogle().then(
+                    () => setStatus("Signed in with Google"),
+                    (e) => setStatus(authErrorMessage(e) ?? ""),
+                  )
+                }
+              >
+                Sign in
+              </button>
+            </div>
+          ) : (
+            <div className="setting-row">
+              <span>
+                <b>Signed in with Google</b>
+                <small>{user.email}</small>
+              </span>
+              <button className="button white" style={{ border: "1px solid var(--grey)" }} onClick={signOut}>
+                Sign out
+              </button>
+            </div>
+          )}
+        </Card>
+      )}
       {status && (
         <p className="subtle" role="status" style={{ marginTop: 12 }}>
           {status}
