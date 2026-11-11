@@ -7,6 +7,8 @@ import { TipsCard } from "@/components/TipsCard";
 import { Button, Card, Gauge, Loading, Unity, num, rs } from "@/components/ui";
 import { formatDate, monthLabel } from "@/lib/dates";
 
+const kg = (n: number) => n.toFixed(n < 10 ? 1 : 0);
+
 export default function DashboardPage() {
   const router = useRouter();
   const { loading, summary, error } = useData();
@@ -91,13 +93,16 @@ export default function DashboardPage() {
           <div className="leaf" aria-hidden>
             ♧
           </div>
-          <p>Positive impact</p>
-          <h2>{co2 ? `${co2.kg.toFixed(1)} kg CO₂ saved` : "— kg CO₂"}</h2>
+          <p>{co2.forecast ? "CO₂ this month" : "CO₂ last bill"}</p>
+          <h2>{co2.savedKg > 0 ? `${kg(co2.savedKg)} kg CO₂ saved` : `${kg(co2.footprintKg)} kg CO₂`}</h2>
           <span>
-            {co2
-              ? `vs ${monthLabel(co2.baselineMonth, true)} (${num(co2.baselineUnits)} units) · ${num(co2.unitsSaved)} units less`
-              : "Snap your meter to see your impact"}
+            {co2.savedKg > 0
+              ? `${num(co2.units)} vs ${num(co2.baselineUnits)} units in ${monthLabel(co2.baselineMonth, true)} · footprint ${kg(co2.footprintKg)} kg`
+              : co2.extraKg > 0
+                ? `${kg(co2.extraKg)} kg more than ${monthLabel(co2.baselineMonth, true)} (${num(co2.baselineUnits)} units)`
+                : `Same as ${monthLabel(co2.baselineMonth, true)}`}
           </span>
+          {co2.avoidableKg > 0 && <small className="co2-tip">Staying under 200 units avoids {kg(co2.avoidableKg)} kg CO₂</small>}
         </Card>
         <TipsCard />
       </div>

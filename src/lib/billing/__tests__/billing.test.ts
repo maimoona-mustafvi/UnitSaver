@@ -155,6 +155,25 @@ describe("summarize (demo data)", () => {
     expect(s.alert).toBe(true);
     expect(s.status.isProtected).toBe(false);
   });
+  it("CO2: forecast footprint vs same month last year, and what staying at 200 avoids", () => {
+    const f = tariffs.gridEmissionFactor;
+    const p = s.prediction.predictedUnits;
+    expect(s.co2.forecast).toBe(true);
+    expect(s.co2.footprintKg).toBeCloseTo(p * f);
+    expect(s.co2.baselineUnits).toBe(404); // same month last year in the reference history
+    expect(s.co2.savedKg).toBeCloseTo((404 - p) * f);
+    expect(s.co2.extraKg).toBe(0);
+    expect(s.co2.avoidableKg).toBeCloseTo((p - 200) * f);
+  });
+  it("CO2 before any reading uses the last bill", () => {
+    const d = demoData("2026-11-11");
+    const c = summarize({ ...d, readings: [] }, "2026-11-11")!.co2;
+    expect(c.forecast).toBe(false);
+    expect(c.units).toBe(431);
+    expect(c.baselineUnits).toBe(408); // 431 vs 408 a year earlier → more, not less
+    expect(c.extraKg).toBeCloseTo(23 * tariffs.gridEmissionFactor);
+    expect(c.savedKg).toBe(0);
+  });
   it("returns null before setup", () => {
     expect(summarize({ ...demoData(), lastBill: null })).toBeNull();
   });

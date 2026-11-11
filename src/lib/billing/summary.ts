@@ -24,8 +24,24 @@ export interface Summary {
   estimate: Bill;
   lastBillUnits: number;
   lastBill: Bill;
-  co2: { baselineMonth: string; baselineUnits: number; unitsSaved: number; kg: number } | null;
+  co2: Co2Summary;
   alert: boolean;
+}
+
+export interface Co2Summary {
+  /** true: footprint is this cycle's month-end forecast; false: no reading yet, so it's the last bill's month. */
+  forecast: boolean;
+  units: number;
+  /** kg CO2 for `units`. */
+  footprintKg: number;
+  baselineMonth: string;
+  baselineUnits: number;
+  /** kg avoided vs the baseline month (0 if using more). */
+  savedKg: number;
+  /** kg above the baseline month (0 if using less). */
+  extraKg: number;
+  /** kg that staying at 200 units would avoid this month (0 if already ≤ 200). */
+  avoidableKg: number;
 }
 
 const unitsIn = (h: MonthUnits[], month: string) => h.find((m) => m.month === month)?.units;
@@ -79,12 +95,24 @@ export function summarize(data: UserData, today = todayISO(), t = defaultTariffs
     tariffs: t,
   });
 
-  // CO2 baseline: same month last year if known, else last month.
-  const lastYear = addMonths(currentMonth, -12);
-  const baselineMonth = unitsIn(history, lastYear) !== undefined ? lastYear : lb.month;
-  const baselineUnits = unitsIn(history, baselineMonth)!;
-  const saved = unitsSaved(baselineUnits, prediction.predictedUnits);
-  const co2 = hasReading ? { baselineMonth, baselineUnits, unitsSaved: saved, kg: co2Kg(saved, t.gridEmissionFactor) } : null;
+  // CO2 for this cycle's forecast (or the last bill before any reading), compared with the same month last year
+  // when known, else the month before.
+  const co2Month = hasReading ? currentMonth : lb.month;
+  const co2Units = hasReading ? prediction.predictedUnits : lastBillUnits;
+  const lastYear = addMonths(co2Month, -12);
+  const baselineMonth = unitsIn(history, lastYear) !== undefined ? lastYear : addMonths(co2Month, -1);
+  const baselineUnits = unitsIn(history, baselineMonth) ?? co2Units;
+  const kg = (u: number) => co2Kg(u, t.gridEmissionFactor);
+  const co2: Co2Summary = {
+    forecast: hasReading,
+    units: co2Units,
+    footprintKg: kg(co2Units),
+    baselineMonth,
+    baselineUnits,
+    savedKg: kg(unitsSaved(baselineUnits, co2Units)),
+    extraKg: kg(unitsSaved(co2Units, baselineUnits)),
+    avoidableKg: kg(Math.max(0, co2Units - t.protectedLimit)),
+  };
 
   return {
     currentMonth,

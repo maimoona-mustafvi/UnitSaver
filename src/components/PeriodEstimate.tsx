@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { appliancePeriod, billStatus, calculateBill, protectedStatus } from "@/lib/billing";
+import { appliancePeriod, billStatus, calculateBill, co2Kg, protectedStatus } from "@/lib/billing";
 import { daysBetween, todayISO } from "@/lib/dates";
 import { useData } from "./DataProvider";
 import { useTips } from "./useTips";
@@ -84,6 +84,7 @@ export function PeriodEstimate() {
           </p>
           <h3>{units(p.monthUnits)} units</h3>
           <strong>{rs(month.payable)}</strong>
+          <small>≈ {Math.round(co2Kg(p.monthUnits))} kg CO₂ this month</small>
           <small>
             if usage continues · <span className="estimated-tag">Estimated</span>
           </small>

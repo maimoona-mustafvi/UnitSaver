@@ -2308,3 +2308,9 @@ a.button,
     grid-template-columns: 1fr;
   }
 }
+.co2-tip {
+  display: block;
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
