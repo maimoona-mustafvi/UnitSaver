@@ -2,24 +2,26 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { authErrorMessage } from "@/lib/firebase";
+import { authErrorKey } from "@/lib/firebase";
 import { useData } from "./DataProvider";
+import { useI18n } from "./LanguageProvider";
 import { Button } from "./ui";
 
 /** Top-right landing button: open the app when signed in, otherwise Google sign-in. */
 export function HeaderAuth() {
   const { user, authEnabled, authReady, signInGoogle } = useData();
+  const { t } = useI18n();
   const router = useRouter();
   if (user || !authEnabled || !authReady) {
     return (
       <Button variant="white" href="/dashboard">
-        Open app
+        {t("auth.openApp")}
       </Button>
     );
   }
   return (
     <Button variant="white" onClick={() => signInGoogle().then(() => router.push("/dashboard"), () => undefined)}>
-      Sign in
+      {t("auth.signIn")}
     </Button>
   );
 }
@@ -27,6 +29,7 @@ export function HeaderAuth() {
 /** Hero call to action: Google sign-in or guest, or "Open app" when already signed in. */
 export function HeroAuth() {
   const { user, authEnabled, authReady, signInGoogle, signInGuest } = useData();
+  const { t } = useI18n();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -34,7 +37,7 @@ export function HeroAuth() {
   if (!authEnabled) {
     return (
       <Button variant="lime" href="/setup">
-        Get Started <span>→</span>
+        {t("auth.getStarted")}
       </Button>
     );
   }
@@ -52,9 +55,9 @@ export function HeroAuth() {
     return (
       <div className="auth-actions">
         <Button variant="lime" href="/dashboard">
-          Open app <span>→</span>
+          {t("auth.openAppArrow")}
         </Button>
-        <small>{user.isGuest ? "Signed in as a guest" : `Signed in as ${user.name ?? user.email}`}</small>
+        <small>{user.isGuest ? t("auth.signedInGuest") : t("auth.signedInAs", { name: user.name ?? user.email ?? "" })}</small>
       </div>
     );
   }
@@ -66,7 +69,8 @@ export function HeroAuth() {
       await signIn();
       router.push("/dashboard");
     } catch (e) {
-      setError(authErrorMessage(e) ?? "");
+      const key = authErrorKey(e);
+      setError(key ? t(key) : "");
       setBusy(false);
     }
   }
@@ -77,17 +81,17 @@ export function HeroAuth() {
         <span className="google-g" aria-hidden>
           G
         </span>
-        Sign in with Google
+        {t("auth.google")}
       </Button>
       <Button variant="white" onClick={() => go(signInGuest)} disabled={busy}>
-        Continue as guest
+        {t("auth.guest")}
       </Button>
       {error && (
         <p className="auth-error" role="alert">
           {error}
         </p>
       )}
-      <small>Guests can sign in with Google later and keep their data.</small>
+      <small>{t("auth.guestNote")}</small>
     </div>
   );
 }

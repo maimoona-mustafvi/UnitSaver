@@ -24,6 +24,8 @@ Most families only find out when the bill arrives. Bills are also hard to read: 
 5. **Bill breakdown:** every line of an IESCO bill, computed in deterministic TypeScript and tested against a real bill.
 6. **Appliances:** watts × hours × 30 → monthly units → bill, a "who uses the most" donut, and "cut X hours to get under 200".
 7. **History:** 12-month chart (months over 200 in pink, units or rupees), insights, readings and a CSV export.
+8. **English and اردو:** visitors choose a language on their first visit, and can switch any time from the top bar or Settings. Every screen is translated and laid out right-to-left in Urdu, and Gemini writes the tips in Urdu too.
+9. **Sign-in:** "Sign in with Google" or "Continue as guest" (Firebase Authentication). A guest who later signs in with Google keeps their data.
 
 ## SDGs
 
@@ -86,7 +88,7 @@ pnpm dev                     # http://localhost:3000
 
 Firebase console steps:
 
-1. **Authentication → Sign-in method → Anonymous → Enable.**
+1. **Authentication → Sign-in method → enable Google** (choose a support email) **and Anonymous** (for "Continue as guest").
 2. **Firestore Database → Create database.**
 3. Deploy the rules in `firestore.rules` (each user can only read and write `users/{their uid}`): `firebase deploy --only firestore:rules`, or paste them into the console.
 
@@ -164,4 +166,4 @@ firestore.rules              Per-user security rules
 
 ## Future work
 
-Load-shedding planner, AI chat assistant, Urdu/RTL, fetching bills from the PITC portal, smart-plug integration, solar calculator.
+Load-shedding planner, AI chat assistant, voice input in Urdu, fetching bills from the PITC portal, smart-plug integration, solar calculator.

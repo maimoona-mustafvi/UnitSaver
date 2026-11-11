@@ -28,15 +28,15 @@ export function todayISO() {
   return iso(new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())));
 }
 
-export const monthLabel = (ym: string, withYear = false) =>
-  new Date(`${ym}-01T00:00:00Z`).toLocaleString("en-US", {
+export const monthLabel = (ym: string, withYear = false, locale = "en-US") =>
+  new Date(`${ym}-01T00:00:00Z`).toLocaleString(locale, {
     month: "short",
     year: withYear ? "numeric" : undefined,
     timeZone: "UTC",
   });
 
-export const formatDate = (day: string) =>
-  new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", {
+export const formatDate = (day: string, locale = "en-GB") =>
+  new Date(`${day}T00:00:00Z`).toLocaleDateString(locale === "en-US" ? "en-GB" : locale, {
     day: "numeric",
     month: "short",
     year: "numeric",

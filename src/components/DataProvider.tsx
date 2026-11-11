@@ -8,6 +8,7 @@ import { firestoreStore, localStore, type Store } from "@/lib/db";
 import { continueAsGuest, firebaseConfigured, signInWithGoogle, signOutUser, watchUser } from "@/lib/firebase";
 import { summarize, type Summary } from "@/lib/billing";
 import { demoData } from "@/lib/demo";
+import type { Key } from "@/i18n";
 
 export interface AccountInfo {
   uid: string;
@@ -23,7 +24,7 @@ interface DataState {
   user: AccountInfo | null;
   store?: Store;
   data?: UserData;
-  warning?: string;
+  warning?: Key;
   error?: string;
 }
 
@@ -82,7 +83,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const local = localStore();
         const data = await local.load();
         if (currentUid === u.uid)
-          setState({ authReady: true, user, store: local, data, warning: "Cloud sync is unavailable. Your data is saved on this device." });
+          setState({ authReady: true, user, store: local, data, warning: "shell.cloudWarning" });
       }
     });
   }, []);

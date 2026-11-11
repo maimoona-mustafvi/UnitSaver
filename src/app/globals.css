@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Poppins:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Poppins:wght@400;500;600;700;800&family=Noto+Naskh+Arabic:wght@400;600;700&display=swap");
 @import "tailwindcss";
 
 @theme {
@@ -2374,4 +2374,238 @@ a.button,
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* ---------- Language: switch, first-visit chooser ---------- */
+.lang-switch {
+  border: 1px solid var(--grey);
+  background: #fff;
+  color: var(--ink);
+  border-radius: 999px;
+  min-height: 42px;
+  padding: 0 16px;
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.lang-switch.on-blue {
+  background: transparent;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.6);
+}
+.lang-switch[lang="ur"],
+.lang-option[lang="ur"],
+[lang="ur"] {
+  font-family: "Noto Naskh Arabic", "Poppins", sans-serif;
+}
+[lang="en"] {
+  font-family: "Poppins", sans-serif;
+}
+.landing-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.page-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.lang-modal {
+  background: #fff;
+  border-radius: 30px;
+  padding: 32px 28px;
+  width: min(480px, 100%);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.lang-modal .brand {
+  justify-content: center;
+  color: var(--blue);
+}
+.lang-modal h2 {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 22px;
+}
+.lang-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.lang-option {
+  border: 2px solid var(--blue);
+  background: #fff;
+  border-radius: 22px;
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  color: var(--ink);
+}
+.lang-option:hover,
+.lang-option:focus-visible {
+  background: var(--pale);
+}
+.lang-option b {
+  font-size: 24px;
+}
+.lang-option small {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* ---------- Urdu typography ---------- */
+html[lang="ur"] body {
+  line-height: 1.7;
+}
+/* Letter-spacing breaks the joins between Urdu letters. */
+html[lang="ur"] * {
+  letter-spacing: 0 !important;
+}
+html[lang="ur"] .hero h1,
+html[lang="ur"] .section-heading h2,
+html[lang="ur"] .alert-modal h1,
+html[lang="ur"] .hello-burst {
+  font-family: "Noto Naskh Arabic", sans-serif;
+  font-weight: 700;
+}
+html[lang="ur"] .hero h1 {
+  font-size: clamp(40px, 4.6vw, 70px);
+  line-height: 1.35;
+}
+html[lang="ur"] .alert-modal h1 {
+  line-height: 1.4;
+}
+html[lang="ur"] .brand,
+html[lang="ur"] .brand-bolt {
+  font-family: "Luckiest Guy", sans-serif;
+}
+html[lang="ur"] .brand-bolt {
+  font-family: "Poppins", sans-serif;
+}
+html[lang="ur"] .topbar h1 {
+  line-height: 1.5;
+}
+html[lang="ur"] .eyebrow,
+html[lang="ur"] .card-kicker span,
+html[lang="ur"] .protected-card p,
+html[lang="ur"] .prediction-card p,
+html[lang="ur"] .co2-card > p,
+html[lang="ur"] .period-box p {
+  text-transform: none;
+}
+
+/* ---------- Right-to-left layout (Urdu) ---------- */
+[dir="rtl"] .sidebar {
+  left: auto;
+  right: 0;
+}
+[dir="rtl"] .app-main {
+  margin-left: 0;
+  margin-right: 250px;
+}
+[dir="rtl"] .sidebar nav .nav-item,
+[dir="rtl"] .setting-row {
+  text-align: right;
+}
+[dir="rtl"] .sidebar-tip .unity {
+  margin: -25px -10px -22px 0;
+}
+[dir="rtl"] .peek {
+  right: auto;
+  left: 12px;
+}
+[dir="rtl"] .shield,
+[dir="rtl"] .leaf {
+  right: auto;
+  left: 20px;
+}
+[dir="rtl"] .half-moon {
+  right: auto;
+  left: -15px;
+}
+[dir="rtl"] .prediction-card .unity {
+  right: auto;
+  left: -5px;
+}
+[dir="rtl"] .modal-close {
+  right: auto;
+  left: 20px;
+}
+[dir="rtl"] .total-card em {
+  right: auto;
+  left: 24px;
+}
+[dir="rtl"] .mobile-fab {
+  right: auto;
+  left: 24px;
+}
+[dir="rtl"] .circle-button i {
+  right: auto;
+  left: 4px;
+}
+[dir="rtl"] .mini-bubble {
+  right: auto;
+  left: 8%;
+  border-radius: 18px 18px 4px 18px;
+}
+[dir="rtl"] .hello-burst {
+  left: auto;
+  right: 4%;
+}
+[dir="rtl"] .speech {
+  right: auto;
+  left: 2%;
+}
+[dir="rtl"] .stepbar span {
+  margin-left: 0;
+  margin-right: 8px;
+}
+[dir="rtl"] .profile-banner button {
+  margin-left: 0;
+  margin-right: auto;
+}
+[dir="rtl"] .tip-banner button,
+[dir="rtl"] .appliance-card label b {
+  float: left;
+}
+/* Numbers people type (readings, watts, days) stay left-to-right. */
+[dir="rtl"] input[inputmode="numeric"],
+[dir="rtl"] input[inputmode="decimal"],
+[dir="rtl"] input[type="number"],
+[dir="rtl"] input[type="date"],
+[dir="rtl"] input[type="month"] {
+  direction: ltr;
+  text-align: right;
+}
+@media (max-width: 1050px) {
+  [dir="rtl"] .app-main {
+    margin-right: 88px;
+  }
+  [dir="rtl"] .sidebar > .brand {
+    margin-left: 0;
+    margin-right: 13px;
+  }
+}
+@media (max-width: 700px) {
+  [dir="rtl"] .app-main {
+    margin-right: 0;
+  }
+  [dir="rtl"] .profile-banner button {
+    right: auto;
+    left: 18px;
+  }
+  .landing-actions .lang-switch {
+    min-height: 40px;
+    padding: 0 12px;
+  }
+  .lang-options {
+    grid-template-columns: 1fr;
+  }
 }

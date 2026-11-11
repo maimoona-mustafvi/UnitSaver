@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import tariffs from "@/config/tariffs.json";
-import { authErrorMessage } from "@/lib/firebase";
 import { useData } from "@/components/DataProvider";
+import { useI18n } from "@/components/LanguageProvider";
 import { Card, Loading, Notice } from "@/components/ui";
+import type { Lang } from "@/i18n";
+import { authErrorKey } from "@/lib/firebase";
 import type { Settings } from "@/types";
 
 const initials = (name?: string | null) =>
   name
-    ?.split(/s+/)
+    ?.split(/\s+/)
     .map((w) => w[0])
     .slice(0, 2)
     .join("")
@@ -32,18 +34,19 @@ function Row({ title, hint, children }: { title: string; hint: string; children:
 
 export default function SettingsPage() {
   const { loading, data, store, run, loadDemo, reset, user, authEnabled, signInGoogle, signOut } = useData();
+  const { t, lang, setLang } = useI18n();
   const [status, setStatus] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
   if (loading || !data) return <Loading />;
   const s = data.settings;
 
   async function update(patch: Partial<Settings>) {
-    setStatus("Saving…");
+    setStatus(t("common.saving"));
     try {
       await run((st) => st.saveProfile({ settings: { ...s, ...patch } }));
-      setStatus("Saved");
+      setStatus(t("common.saved"));
     } catch (e) {
-      setStatus(`Couldn't save: ${e instanceof Error ? e.message : e}`);
+      setStatus(t("common.couldntSave", { e: e instanceof Error ? e.message : String(e) }));
     }
   }
   const clampInt = (v: string, min: number, max: number) => Math.min(max, Math.max(min, Math.round(Number(v) || min)));
@@ -56,47 +59,44 @@ export default function SettingsPage() {
           {user?.photo ? <img src={user.photo} alt="" referrerPolicy="no-referrer" /> : initials(user?.name)}
         </div>
         <div>
-          <h2>{user && !user.isGuest ? (user.name ?? user.email) : "Your household"}</h2>
-          <p>
-            {store?.mode !== "firebase"
-              ? "Saved on this device only"
-              : user?.isGuest
-                ? "Guest account · synced with Firebase"
-                : `${user?.email ?? ""} · synced with Firebase`}
-          </p>
-          <b>{s.company} customer</b>
+          <h2>{user && !user.isGuest ? (user.name ?? user.email) : t("st.household")}</h2>
+          <p>{store?.mode !== "firebase" ? t("st.local") : user?.isGuest ? t("st.guestSync") : t("st.sync", { email: user?.email ?? "" })}</p>
+          <b>{t("st.customer", { c: s.company })}</b>
         </div>
-        <button onClick={() => loadDemo().then(() => setStatus("Demo data loaded"))}>Load demo data</button>
+        <button onClick={() => loadDemo().then(() => setStatus(t("st.demoLoaded")))}>{t("common.loadDemo")}</button>
       </Card>
       {authEnabled && user && (
         <Card className="settings-list">
-          <h2>Account</h2>
+          <h2>{t("st.account")}</h2>
           {user.isGuest ? (
             <div className="setting-row">
               <span>
-                <b>Sign in with Google</b>
-                <small>Keep your data safe and use it on any device. Nothing you saved as a guest is lost.</small>
+                <b>{t("st.googleTitle")}</b>
+                <small>{t("st.googleText")}</small>
               </span>
               <button
                 className="button blue"
                 onClick={() =>
                   signInGoogle().then(
-                    () => setStatus("Signed in with Google"),
-                    (e) => setStatus(authErrorMessage(e) ?? ""),
+                    () => setStatus(t("st.signedInGoogle")),
+                    (e) => {
+                      const key = authErrorKey(e);
+                      setStatus(key ? t(key) : "");
+                    },
                   )
                 }
               >
-                Sign in
+                {t("auth.signIn")}
               </button>
             </div>
           ) : (
             <div className="setting-row">
               <span>
-                <b>Signed in with Google</b>
+                <b>{t("st.signedInGoogle")}</b>
                 <small>{user.email}</small>
               </span>
               <button className="button white" style={{ border: "1px solid var(--grey)" }} onClick={signOut}>
-                Sign out
+                {t("st.signOut")}
               </button>
             </div>
           )}
@@ -109,21 +109,31 @@ export default function SettingsPage() {
       )}
 
       <Card className="settings-list">
-        <h2>Bill preferences</h2>
-        <Row title="Electricity company" hint="Uniform national tariff is used for all DISCOs">
+        <h2>{t("st.prefs")}</h2>
+        <Row title={t("st.language")} hint={t("st.languageHint")}>
+          <select className="setting-control" value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
+            <option value="en" lang="en">
+              English
+            </option>
+            <option value="ur" lang="ur">
+              اردو
+            </option>
+          </select>
+        </Row>
+        <Row title={t("st.company")} hint={t("st.companyHint")}>
           <select className="setting-control" value={s.company} onChange={(e) => update({ company: e.target.value })}>
             {COMPANIES.map((c) => (
               <option key={c}>{c}</option>
             ))}
           </select>
         </Row>
-        <Row title="Meter type" hint="TOU meters get peak-hour tips">
+        <Row title={t("st.meter")} hint={t("st.meterHint")}>
           <select className="setting-control" value={s.meterType} onChange={(e) => update({ meterType: e.target.value as Settings["meterType"] })}>
-            <option value="normal">Normal</option>
-            <option value="tou">TOU</option>
+            <option value="normal">{t("st.normal")}</option>
+            <option value="tou">{t("st.tou")}</option>
           </select>
         </Row>
-        <Row title="Billing cycle date" hint="Day of the month your meter is read">
+        <Row title={t("st.cycle")} hint={t("st.cycleHint")}>
           <input
             className="setting-control"
             type="number"
@@ -134,13 +144,13 @@ export default function SettingsPage() {
             onBlur={(e) => update({ billingCycleDay: clampInt(e.target.value, 1, 31) })}
           />
         </Row>
-        <Row title="Tax filer status" hint="Non-filers pay income tax on large bills">
+        <Row title={t("st.filer")} hint={t("st.filerHint")}>
           <select className="setting-control" value={s.isFiler ? "filer" : "non"} onChange={(e) => update({ isFiler: e.target.value === "filer" })}>
-            <option value="filer">Filer</option>
-            <option value="non">Non-filer</option>
+            <option value="filer">{t("st.filerOpt")}</option>
+            <option value="non">{t("st.nonFiler")}</option>
           </select>
         </Row>
-        <Row title="Alert threshold" hint="Warn me when units reach this number">
+        <Row title={t("st.threshold")} hint={t("st.thresholdHint")}>
           <input
             className="setting-control"
             type="number"
@@ -154,8 +164,8 @@ export default function SettingsPage() {
       </Card>
 
       <Card className="settings-list">
-        <h2>Notifications</h2>
-        <Row title="Usage alerts" hint="Show the near-200 alert">
+        <h2>{t("st.notifications")}</h2>
+        <Row title={t("st.alerts")} hint={t("st.alertsHint")}>
           <span className="switch">
             <input type="checkbox" checked={s.alertsEnabled} onChange={(e) => update({ alertsEnabled: e.target.checked })} />
             <i />
@@ -164,17 +174,16 @@ export default function SettingsPage() {
       </Card>
 
       <Card className="settings-list">
-        <h2>Your data</h2>
+        <h2>{t("st.data")}</h2>
         <Link className="setting-row" href="/setup" style={{ textDecoration: "none", color: "inherit" }}>
           <span>
-            <b>Update last bill</b>
-            <small>Re-upload or edit your bill and history</small>
+            <b>{t("st.updateBill")}</b>
+            <small>{t("st.updateBillHint")}</small>
           </span>
-          <i>›</i>
+          <i>{lang === "ur" ? "‹" : "›"}</i>
         </Link>
         <Notice>
-          {tariffs.verified ? "Tariffs verified against NEPRA." : "Tariff rates are prototype values – verify against the latest NEPRA notification."} Estimate based on current NEPRA
-          tariffs. Actual bill may vary.
+          {tariffs.verified ? t("st.verified") : t("st.unverified")} {t("common.legal")}
         </Notice>
       </Card>
 
@@ -184,11 +193,11 @@ export default function SettingsPage() {
           if (!confirmReset) return setConfirmReset(true);
           await reset();
           setConfirmReset(false);
-          setStatus("All data deleted");
+          setStatus(t("st.deleted"));
         }}
         onBlur={() => setConfirmReset(false)}
       >
-        {confirmReset ? "Tap again to delete everything" : "Delete my data"}
+        {confirmReset ? t("st.confirmDelete") : t("st.delete")}
       </button>
     </>
   );

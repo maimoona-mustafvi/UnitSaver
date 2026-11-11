@@ -3,25 +3,27 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import type { Key } from "@/i18n";
 import { useData } from "./DataProvider";
 import { AlertModal } from "./AlertModal";
+import { LanguageSwitch, useI18n } from "./LanguageProvider";
 import { Button, Notice, Unity } from "./ui";
 
-const nav = [
-  { href: "/dashboard", label: "Dashboard", icon: "⌂" },
-  { href: "/reading", label: "New Reading", icon: "▣" },
-  { href: "/bill", label: "Bill Breakdown", icon: "₨" },
-  { href: "/appliances", label: "Appliances", icon: "⌁" },
-  { href: "/history", label: "History", icon: "↗" },
-  { href: "/settings", label: "Settings", icon: "⚙" },
+const nav: { href: string; label: Key; short: Key; icon: string }[] = [
+  { href: "/dashboard", label: "nav.dashboard", short: "nav.short.dashboard", icon: "⌂" },
+  { href: "/reading", label: "nav.reading", short: "nav.short.reading", icon: "▣" },
+  { href: "/bill", label: "nav.bill", short: "nav.short.bill", icon: "₨" },
+  { href: "/appliances", label: "nav.appliances", short: "nav.short.appliances", icon: "⌁" },
+  { href: "/history", label: "nav.history", short: "nav.short.history", icon: "↗" },
+  { href: "/settings", label: "nav.settings", short: "nav.settings", icon: "⚙" },
 ];
 
-const titles: Record<string, string> = {
-  "/dashboard": "Your energy at a glance",
-  "/bill": "Bill breakdown",
-  "/appliances": "My appliances",
-  "/history": "Usage history",
-  "/settings": "Settings",
+const titles: Record<string, Key> = {
+  "/dashboard": "title.dashboard",
+  "/bill": "title.bill",
+  "/appliances": "title.appliances",
+  "/history": "title.history",
+  "/settings": "title.settings",
 };
 
 const ALERT_SEEN = "unitsaver:alert-seen";
@@ -34,14 +36,15 @@ function seenAlert() {
   }
 }
 
-function greeting() {
+function greeting(): Key {
   const h = new Date().getHours();
-  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+  return h < 12 ? "greet.morning" : h < 17 ? "greet.afternoon" : "greet.evening";
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname();
   const { summary, warning, user } = useData();
+  const { t } = useI18n();
   const [manualOpen, setManualOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   // summary only exists on the client (data loads after mount), so reading sessionStorage here is hydration-safe.
@@ -61,11 +64,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="brand-bolt">ϟ</span>
           <span>UnitSaver</span>
         </Link>
-        <nav aria-label="Main">
+        <nav aria-label={t("common.mainNav")}>
           {nav.map((item) => (
             <Link key={item.href} href={item.href} className={`nav-item ${path === item.href ? "active" : ""}`} aria-current={path === item.href ? "page" : undefined}>
               <i aria-hidden>{item.icon}</i>
-              <span>{item.label}</span>
+              <span>{t(item.label)}</span>
             </Link>
           ))}
         </nav>
@@ -73,8 +76,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="sidebar-tip">
             <Unity size={52} mood={summary.unitsSoFar > 200 ? "worried" : "happy"} />
             <span>
-              <b>{summary.unitsSoFar} units</b>
-              <small>{summary.alert ? "Careful – near 200!" : "You're doing great!"}</small>
+              <b>{t("common.unitsN", { n: summary.unitsSoFar })}</b>
+              <small>{summary.alert ? t("shell.careful") : t("shell.great")}</small>
             </span>
           </div>
         )}
@@ -82,19 +85,20 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="app-main">
         <header className="topbar">
           <div>
-            <p suppressHydrationWarning>{greeting()}</p>
-            <h1>{titles[path] ?? "UnitSaver"}</h1>
+            <p suppressHydrationWarning>{t(greeting())}</p>
+            <h1>{titles[path] ? t(titles[path]) : "UnitSaver"}</h1>
           </div>
           <div className="top-actions">
-            {path === "/dashboard" && <Button href="/reading">＋ New Reading</Button>}
+            {path === "/dashboard" && <Button href="/reading">{t("shell.newReading")}</Button>}
+            <LanguageSwitch />
             <button
               className="circle-button"
-              aria-label={summary?.alert ? "Usage alert – open" : "No alerts"}
+              aria-label={summary?.alert ? t("shell.alertOpen") : t("shell.noAlerts")}
               onClick={() => summary?.alert && setManualOpen(true)}
             >
               ♢{summary?.alert && <i />}
             </button>
-            <Link className="avatar" href="/settings" aria-label="Settings">
+            <Link className="avatar" href="/settings" aria-label={t("nav.settings")}>
               {user?.photo ? (
                 // eslint-disable-next-line @next/next/no-img-element -- Google avatar URL
                 <img src={user.photo} alt="" referrerPolicy="no-referrer" />
@@ -105,20 +109,20 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
         <main className="page-content">
-          {warning && <Notice>{warning}</Notice>}
+          {warning && <Notice>{t(warning)}</Notice>}
           {children}
         </main>
       </div>
-      <nav className="bottom-nav" aria-label="Main">
+      <nav className="bottom-nav" aria-label={t("common.mainNav")}>
         {nav.slice(0, 5).map((item) => (
           <Link key={item.href} href={item.href} className={`nav-item ${path === item.href ? "active" : ""}`}>
             <i aria-hidden>{item.icon}</i>
-            <span>{item.label.split(" ")[0]}</span>
+            <span>{t(item.short)}</span>
           </Link>
         ))}
       </nav>
       {path === "/dashboard" && (
-        <Link className="mobile-fab" href="/reading" aria-label="New reading">
+        <Link className="mobile-fab" href="/reading" aria-label={t("nav.reading")}>
           ▣
         </Link>
       )}

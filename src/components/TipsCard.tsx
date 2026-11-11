@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "./LanguageProvider";
 import { useTips } from "./useTips";
 import { AIBadge, Card } from "./ui";
 
@@ -7,20 +8,25 @@ const icons = ["⌁", "≈", "□"];
 
 export function TipsCard() {
   const { enabled, loading, result, error } = useTips();
+  const { t } = useI18n();
   return (
     <Card className="tips-card">
       <div className="result-title">
-        <h2>Tips for you</h2>
-        {result?.source === "ai" && <AIBadge title="Written by Gemini from your usage" />}
+        <h2>{t("tips.title")}</h2>
+        {result?.source === "ai" && <AIBadge title={t("tips.aiTitle")} />}
       </div>
-      {!enabled && <p className="subtle">Snap your meter to get tips for this month.</p>}
-      {loading && <p className="subtle" role="status">Writing tips for your home…</p>}
-      {error && <p className="subtle">Couldn&apos;t load tips right now. Try again later.</p>}
+      {!enabled && <p className="subtle">{t("tips.snap")}</p>}
+      {loading && (
+        <p className="subtle" role="status">
+          {t("tips.loading")}
+        </p>
+      )}
+      {error && <p className="subtle">{t("tips.error")}</p>}
       {result?.tips.map((tip, i) => (
         <div className="tip-row" key={tip}>
           <i aria-hidden>{icons[i % icons.length]}</i>
           <span>{tip}</span>
-          <b aria-hidden>→</b>
+          <b aria-hidden>{t("common.arrow")}</b>
         </div>
       ))}
     </Card>

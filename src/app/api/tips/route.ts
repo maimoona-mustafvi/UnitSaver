@@ -17,6 +17,7 @@ Facts (computed, trust them): ${JSON.stringify(input)}
 - Mention concrete appliances from the list and numbers (hours, units) where possible.
 - Never suggest something the user already does (e.g. ironing once a week when daysPerWeek is already 1).
 - ${input.meterType === "tou" ? "This is a TOU meter: one tip may shift heavy loads out of peak hours." : "This is NOT a TOU meter: do NOT give any peak-hour or time-of-use advice."}
+- ${input.lang === "ur" ? "Write every tip in simple, everyday Urdu (Urdu script), the way a Pakistani household speaks. Keep numbers as digits (0-9) and appliance names familiar (e.g. اے سی، فریج، استری، موٹر)." : "Write in simple English."}
 - No greetings, no markdown.`;
 
   try {

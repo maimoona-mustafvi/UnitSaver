@@ -6,7 +6,12 @@ export const geminiModel = process.env.GEMINI_MODEL || "gemini-3.5-flash";
 // Used once when the main model is overloaded or times out.
 const fallbackModel = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.5-flash-lite";
 
-export class InputError extends Error {}
+/** Bad upload; `code` maps to an `err.*` translation on the client. */
+export class InputError extends Error {
+  constructor(public code: "no_file" | "too_large" | "bad_type") {
+    super(code);
+  }
+}
 export class GeminiUnavailable extends Error {}
 
 let client: GoogleGenAI | undefined;
@@ -53,17 +58,17 @@ const ALLOWED = /^(image\/(jpeg|png|webp|heic|heif)|application\/pdf)$/;
 export async function fileFromRequest(req: Request): Promise<InlineFile> {
   const form = await req.formData().catch(() => null);
   const file = form?.get("image");
-  if (!(file instanceof File) || file.size === 0) throw new InputError("Please attach a photo.");
-  if (file.size > MAX_BYTES) throw new InputError("That file is larger than 10MB.");
-  if (!ALLOWED.test(file.type)) throw new InputError("Please upload a JPG, PNG, WEBP, HEIC or PDF file.");
+  if (!(file instanceof File) || file.size === 0) throw new InputError("no_file");
+  if (file.size > MAX_BYTES) throw new InputError("too_large");
+  if (!ALLOWED.test(file.type)) throw new InputError("bad_type");
   return { data: Buffer.from(await file.arrayBuffer()).toString("base64"), mimeType: file.type };
 }
 
 export function errorResponse(e: unknown) {
-  if (e instanceof InputError) return Response.json({ error: e.message }, { status: 400 });
+  if (e instanceof InputError) return Response.json({ code: e.code, error: e.message }, { status: 400 });
   console.error("[gemini]", e);
-  if (e instanceof GeminiUnavailable) return Response.json({ error: "AI reading is not configured. Please enter the values manually." }, { status: 503 });
+  if (e instanceof GeminiUnavailable) return Response.json({ code: "not_configured", error: "AI reading is not configured" }, { status: 503 });
   if (/API key not valid|UNAUTHENTICATED|PERMISSION_DENIED/.test(String(e)))
-    return Response.json({ error: "The Gemini API key is invalid. Check GEMINI_API_KEY, or enter the values manually." }, { status: 503 });
-  return Response.json({ error: "We couldn't read it clearly. Try again or enter manually." }, { status: 502 });
+    return Response.json({ code: "invalid_key", error: "Gemini API key is invalid" }, { status: 503 });
+  return Response.json({ code: "unreadable", error: "Could not read the image" }, { status: 502 });
 }

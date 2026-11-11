@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { TipsRequest, TipsResponse } from "@/lib/schemas";
 import { useData } from "./DataProvider";
+import { useI18n } from "./LanguageProvider";
 
 // One request per distinct input per page load, shared by the tips card and the alert modal.
 const cache = new Map<string, Promise<TipsResponse>>();
@@ -23,6 +24,7 @@ function fetchTips(body: TipsRequest) {
 /** Tips for the metered cycle by default; pass `override` to get tips for another projection (e.g. the appliance estimate). */
 export function useTips(override?: TipsRequest | null) {
   const { data, summary } = useData();
+  const { lang } = useI18n();
   const [state, setState] = useState<{ key?: string; result?: TipsResponse; error?: boolean }>({});
 
   const body: TipsRequest | null =
@@ -38,7 +40,7 @@ export function useTips(override?: TipsRequest | null) {
             appliances: data.appliances.map(({ name, watts, quantity, hoursPerDay, daysPerWeek }) => ({ name, watts, quantity, hoursPerDay, daysPerWeek })),
           }
         : null;
-  const key = body ? JSON.stringify(body) : undefined;
+  const key = body ? JSON.stringify({ ...body, lang }) : undefined;
 
   useEffect(() => {
     if (!key) return;

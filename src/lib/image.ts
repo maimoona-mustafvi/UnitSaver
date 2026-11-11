@@ -1,3 +1,5 @@
+import type { Key } from "@/i18n";
+
 /** Downscales photos in the browser (max 1600px JPEG) so uploads stay small; PDFs and unreadable files pass through. */
 export async function prepareUpload(file: File, maxSide = 1600): Promise<File> {
   if (!file.type.startsWith("image/") || file.type === "image/heic" || file.type === "image/heif") return file;
@@ -16,12 +18,27 @@ export async function prepareUpload(file: File, maxSide = 1600): Promise<File> {
   }
 }
 
-/** POSTs a photo to an AI route and returns its JSON, throwing the route's friendly error message on failure. */
+const CODES = ["no_file", "too_large", "bad_type", "not_configured", "invalid_key", "unreadable"] as const;
+
+/** Error from an AI route; `key` is the translation to show. */
+export class AiError extends Error {
+  constructor(public key: Key) {
+    super(key);
+  }
+}
+
+/** POSTs a photo to an AI route and returns its JSON; throws AiError with a translatable key on failure. */
 export async function postImage<T>(url: string, file: File): Promise<T> {
   const body = new FormData();
   body.append("image", await prepareUpload(file));
-  const res = await fetch(url, { method: "POST", body });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error ?? "We couldn't read it clearly. Try again or enter manually.");
+  const res = await fetch(url, { method: "POST", body }).catch(() => null);
+  const json = res ? await res.json().catch(() => ({})) : {};
+  if (!res?.ok) {
+    const code = (CODES as readonly string[]).includes(json.code) ? json.code : "unreadable";
+    throw new AiError(`err.${code}` as Key);
+  }
   return json as T;
 }
+
+/** Translation key for any failure while reading a photo. */
+export const aiErrorKey = (e: unknown): Key => (e instanceof AiError ? e.key : "err.unreadable");

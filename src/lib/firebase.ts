@@ -11,6 +11,7 @@ import {
   type User,
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import type { Key } from "@/i18n";
 
 // Each NEXT_PUBLIC_ var must be referenced literally so Next.js inlines it into the client bundle.
 const config = {
@@ -56,13 +57,13 @@ export async function signInWithGoogle() {
   }
 }
 
-/** Friendly message for Firebase auth errors; null when the user just closed the popup. */
-export function authErrorMessage(e: unknown): string | null {
+/** Translation key for a Firebase auth error; null when the user just closed the popup. */
+export function authErrorKey(e: unknown): Key | null {
   const code = (e as { code?: string }).code ?? "";
   if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return null;
-  if (code === "auth/operation-not-allowed") return "This sign-in method is not enabled in Firebase Authentication.";
-  if (code === "auth/popup-blocked") return "The sign-in popup was blocked. Allow popups for this site and try again.";
-  if (code === "auth/unauthorized-domain") return "This website's domain is not authorised in Firebase Authentication settings.";
-  if (code === "auth/network-request-failed") return "No internet connection. Please try again.";
-  return "Sign-in failed. Please try again.";
+  if (code === "auth/operation-not-allowed") return "auth.err.notEnabled";
+  if (code === "auth/popup-blocked") return "auth.err.popupBlocked";
+  if (code === "auth/unauthorized-domain") return "auth.err.domain";
+  if (code === "auth/network-request-failed") return "auth.err.network";
+  return "auth.err.generic";
 }

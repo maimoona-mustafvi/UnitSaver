@@ -31,6 +31,7 @@ export const tipsRequestSchema = z.object({
   predictedUnits: z.number().nonnegative(),
   status: z.enum(["protected", "nonProtected"]),
   meterType: z.enum(["normal", "tou"]),
+  lang: z.enum(["en", "ur"]).optional(),
   appliances: z
     .array(
       z.object({ name: z.string().max(60), watts: z.number(), quantity: z.number(), hoursPerDay: z.number(), daysPerWeek: z.number().min(0).max(7).optional() }),

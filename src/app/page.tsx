@@ -1,21 +1,26 @@
+"use client";
+
 import Link from "next/link";
 import { HeaderAuth, HeroAuth } from "@/components/AuthActions";
+import { LanguageChooser, LanguageSwitch, useI18n } from "@/components/LanguageProvider";
 import { C, Card, Unity } from "@/components/ui";
+import type { Key } from "@/i18n";
 
-const features = [
-  { title: "Snap & Calculate", color: C.lime, text: "A photo is all it takes.", icon: "◉" },
-  { title: "Bill with All Taxes", color: C.pink, text: "No surprise charges.", icon: "₨" },
-  { title: "Protected Status Guard", color: C.blue, text: "Stay safely under 200.", icon: "✓" },
-  { title: "CO₂ Saved", color: C.mint, text: "See your positive impact.", icon: "♧" },
+const features: { title: Key; text: Key; color: string; icon: string }[] = [
+  { title: "landing.f1", text: "landing.f1Text", color: C.lime, icon: "◉" },
+  { title: "landing.f2", text: "landing.f2Text", color: C.pink, icon: "₨" },
+  { title: "landing.f3", text: "landing.f3Text", color: C.blue, icon: "✓" },
+  { title: "landing.f4", text: "landing.f4Text", color: C.mint, icon: "♧" },
 ];
 
-const steps = [
-  ["Upload your bill", "We read your last reading and 12-month history."],
-  ["Snap your meter", "Our AI spots the digits."],
-  ["Get your bill & tips", "Plan your usage with confidence."],
+const steps: [Key, Key][] = [
+  ["landing.s1", "landing.s1Text"],
+  ["landing.s2", "landing.s2Text"],
+  ["landing.s3", "landing.s3Text"],
 ];
 
 export default function Landing() {
+  const { t } = useI18n();
   return (
     <div className="landing">
       <header className="landing-header">
@@ -23,22 +28,25 @@ export default function Landing() {
           <span className="brand-bolt">ϟ</span>UnitSaver
         </Link>
         <nav>
-          <a href="#features">Features</a>
-          <a href="#how">How it works</a>
+          <a href="#features">{t("landing.features")}</a>
+          <a href="#how">{t("landing.how")}</a>
         </nav>
-        <HeaderAuth />
+        <div className="landing-actions">
+          <LanguageSwitch className="on-blue" />
+          <HeaderAuth />
+        </div>
       </header>
       <main>
         <section className="hero">
           <div className="hero-copy">
-            <div className="eyebrow">Pakistan&apos;s friendly energy coach</div>
-            <h1>Save every unit with UnitSaver</h1>
-            <p>Track your units, know your bill before it arrives, and stay protected under 200 units.</p>
+            <div className="eyebrow">{t("landing.eyebrow")}</div>
+            <h1>{t("landing.title")}</h1>
+            <p>{t("landing.subtitle")}</p>
             <HeroAuth />
           </div>
           <div className="hero-art">
-            <div className="hello-burst">HELLO!</div>
-            <div className="speech">Let&apos;s save!</div>
+            <div className="hello-burst">{t("landing.hello")}</div>
+            <div className="speech">{t("landing.speech")}</div>
             <div className="orb pink" />
             <div className="orb pale" />
             <Unity size={205} />
@@ -48,8 +56,8 @@ export default function Landing() {
           <div className="section-heading">
             <span>01</span>
             <div>
-              <p>WHY UNITSAVER?</p>
-              <h2>Big savings, made simple.</h2>
+              <p>{t("landing.whyKicker")}</p>
+              <h2>{t("landing.whyTitle")}</h2>
             </div>
           </div>
           <div className="features-grid">
@@ -58,8 +66,8 @@ export default function Landing() {
                 <div className="feature-icon" aria-hidden>
                   {f.icon}
                 </div>
-                <h3>{f.title}</h3>
-                <p>{f.text}</p>
+                <h3>{t(f.title)}</h3>
+                <p>{t(f.text)}</p>
               </Card>
             ))}
           </div>
@@ -67,8 +75,8 @@ export default function Landing() {
             <div className="section-heading">
               <span>02</span>
               <div>
-                <p>HOW IT WORKS</p>
-                <h2>Three tiny steps.</h2>
+                <p>{t("landing.howKicker")}</p>
+                <h2>{t("landing.howTitle")}</h2>
               </div>
             </div>
             <div className="steps">
@@ -76,8 +84,8 @@ export default function Landing() {
                 <div className="step" key={title}>
                   <b>{i + 1}</b>
                   <div>
-                    <h3>{title}</h3>
-                    <p>{text}</p>
+                    <h3>{t(title)}</h3>
+                    <p>{t(text)}</p>
                   </div>
                 </div>
               ))}
@@ -89,9 +97,10 @@ export default function Landing() {
         <div className="brand brand-light">
           <span className="brand-bolt">ϟ</span>UnitSaver
         </div>
-        <p>Small changes. Big savings. A cooler planet.</p>
-        <span>Made for Pakistani homes · SDG 7 · 12 · 13</span>
+        <p>{t("landing.footer")}</p>
+        <span>{t("landing.footerNote")}</span>
       </footer>
+      <LanguageChooser />
     </div>
   );
 }

@@ -4,8 +4,9 @@ import { useState } from "react";
 import { appliancePeriod, billStatus, calculateBill, co2Kg, protectedStatus } from "@/lib/billing";
 import { daysBetween, todayISO } from "@/lib/dates";
 import { useData } from "./DataProvider";
+import { useI18n } from "./LanguageProvider";
 import { useTips } from "./useTips";
-import { AIBadge, Card, Notice, rs } from "./ui";
+import { AIBadge, Card, Notice } from "./ui";
 
 const CYCLE_DAYS = 30;
 const units = (n: number) => (n < 100 ? n.toFixed(1) : Math.round(n).toLocaleString("en-PK"));
@@ -13,6 +14,7 @@ const units = (n: number) => (n < 100 ? n.toFixed(1) : Math.round(n).toLocaleStr
 /** Bill so far from the appliance list after N days, and the whole-month bill if usage continues, with Gemini tips. */
 export function PeriodEstimate() {
   const { data, summary } = useData();
+  const { t, rs } = useI18n();
   const lastBill = data?.lastBill;
   const defaultDays = lastBill ? Math.min(CYCLE_DAYS, Math.max(1, daysBetween(lastBill.readingDate, todayISO()))) : 15;
   const [days, setDays] = useState<number | null>(null);
@@ -55,11 +57,11 @@ export function PeriodEstimate() {
     <Card className="period-card">
       <div className="period-head">
         <div>
-          <h2>Your bill so far</h2>
-          <p className="subtle">From your appliances below. Set how many days have passed since your last bill.</p>
+          <h2>{t("pe.title")}</h2>
+          <p className="subtle">{t("pe.lead")}</p>
         </div>
         <label className="period-days">
-          Days since last bill
+          {t("pe.days")}
           <input
             type="number"
             min={1}
@@ -73,37 +75,39 @@ export function PeriodEstimate() {
       </div>
       <div className="period-grid">
         <div className="period-box now">
-          <p>So far · {p.daysSoFar} days</p>
-          <h3>{units(p.unitsSoFar)} units</h3>
+          <p>{t("pe.soFar", { n: p.daysSoFar })}</p>
+          <h3>{t("common.unitsN", { n: units(p.unitsSoFar) })}</h3>
           <strong>{rs(soFar.payable)}</strong>
-          <small>if the bill were made today</small>
+          <small>{t("pe.today")}</small>
         </div>
         <div className="period-box month">
           <p>
-            Whole month · {CYCLE_DAYS} days {p.daysLeft > 0 && `(+${p.daysLeft} more)`}
+            {t("pe.month", { n: CYCLE_DAYS })} {p.daysLeft > 0 && t("pe.more", { n: p.daysLeft })}
           </p>
-          <h3>{units(p.monthUnits)} units</h3>
+          <h3>{t("common.unitsN", { n: units(p.monthUnits) })}</h3>
           <strong>{rs(month.payable)}</strong>
-          <small>≈ {Math.round(co2Kg(p.monthUnits))} kg CO₂ this month</small>
+          <small>{t("pe.co2", { kg: Math.round(co2Kg(p.monthUnits)) })}</small>
           <small>
-            if usage continues · <span className="estimated-tag">Estimated</span>
+            {t("pe.continues")} · <span className="estimated-tag">{t("common.estimated")}</span>
           </small>
         </div>
       </div>
-      {protectedNow && p.monthUnits > 200 && (
-        <Notice tone="error">At this pace you&apos;ll pass 200 units and lose protected status for 6 months.</Notice>
-      )}
+      {protectedNow && p.monthUnits > 200 && <Notice tone="error">{t("pe.warn")}</Notice>}
       <div className="result-title" style={{ marginTop: 18 }}>
-        <h3>How to bring it down</h3>
-        {tips.result?.source === "ai" && <AIBadge title="Written by Gemini from your appliance usage" />}
+        <h3>{t("pe.how")}</h3>
+        {tips.result?.source === "ai" && <AIBadge title={t("pe.aiTitle")} />}
       </div>
-      {tips.loading && <p className="subtle" role="status">Gemini is looking at your usage…</p>}
-      {tips.error && <p className="subtle">Couldn&apos;t load tips right now.</p>}
-      {tips.result?.tips.map((t, i) => (
-        <div className="tip-row" key={t}>
+      {tips.loading && (
+        <p className="subtle" role="status">
+          {t("pe.loading")}
+        </p>
+      )}
+      {tips.error && <p className="subtle">{t("pe.error")}</p>}
+      {tips.result?.tips.map((tip, i) => (
+        <div className="tip-row" key={tip}>
           <i aria-hidden>{["⌁", "≈", "□"][i % 3]}</i>
-          <span>{t}</span>
-          <b aria-hidden>→</b>
+          <span>{tip}</span>
+          <b aria-hidden>{t("common.arrow")}</b>
         </div>
       ))}
     </Card>

@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { Cell, Pie, PieChart } from "recharts";
 import { useData } from "@/components/DataProvider";
+import { useI18n } from "@/components/LanguageProvider";
 import { PeriodEstimate } from "@/components/PeriodEstimate";
 import { SetupPrompt } from "@/components/SetupPrompt";
-import { Button, C, Card, Loading, Notice, num, rs } from "@/components/ui";
+import { Button, C, Card, Loading, Notice, num } from "@/components/ui";
+import type { Key } from "@/i18n";
 import { applianceTotals, billStatus, calculateBill, hoursToCut } from "@/lib/billing";
 import type { NewAppliance } from "@/lib/db";
 import type { Appliance } from "@/types";
@@ -48,15 +50,14 @@ const presetDraft = (p: Preset) => ({
   daysPerWeek: String(p.daysPerWeek ?? 7),
 });
 const emptyDraft = (): Draft => presetDraft(PRESETS[0]);
-const often = (days = 7) => (days >= 7 ? "daily" : `${days} day${days === 1 ? "" : "s"}/week`);
 
-function parseDraft(d: Draft): NewAppliance | string {
+function parseDraft(d: Draft): NewAppliance | Key {
   const watts = Number(d.watts), quantity = Number(d.quantity), hoursPerDay = Number(d.hoursPerDay), daysPerWeek = Number(d.daysPerWeek);
-  if (!d.name.trim()) return "Give the appliance a name.";
-  if (!(watts > 0 && watts <= 10000)) return "Watts must be between 1 and 10,000.";
-  if (!(Number.isInteger(quantity) && quantity >= 1 && quantity <= 50)) return "Quantity must be a whole number from 1 to 50.";
-  if (!(hoursPerDay >= 0 && hoursPerDay <= 24)) return "Hours per day must be between 0 and 24 (use 0.5 for 30 minutes).";
-  if (!(Number.isInteger(daysPerWeek) && daysPerWeek >= 1 && daysPerWeek <= 7)) return "Days per week must be a whole number from 1 to 7.";
+  if (!d.name.trim()) return "ap.err.name";
+  if (!(watts > 0 && watts <= 10000)) return "ap.err.watts";
+  if (!(Number.isInteger(quantity) && quantity >= 1 && quantity <= 50)) return "ap.err.qty";
+  if (!(hoursPerDay >= 0 && hoursPerDay <= 24)) return "ap.err.hours";
+  if (!(Number.isInteger(daysPerWeek) && daysPerWeek >= 1 && daysPerWeek <= 7)) return "ap.err.days";
   return { id: d.id, name: d.name.trim().slice(0, 60), watts, quantity, hoursPerDay, daysPerWeek };
 }
 
@@ -65,11 +66,15 @@ const toAppliance = ({ id, name, watts, quantity, hoursPerDay, daysPerWeek }: Ap
 
 export default function AppliancesPage() {
   const { loading, data, run, summary } = useData();
+  const { t, rs, appliance } = useI18n();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [formError, setFormError] = useState("");
   const [hours, setHours] = useState<Record<string, number>>({});
   if (loading) return <Loading />;
   if (!data) return <SetupPrompt />;
+
+  const often = (days = 7) => (days >= 7 ? t("ap.daily") : t("ap.perWeek", { n: days }));
+  const duration = (h: number) => (h < 1 ? t("ap.min", { n: h * 60 }) : t("ap.h", { n: h }));
 
   // Slider values show instantly; they are saved when the user lets go.
   const list = data.appliances.map((a) => ({ ...a, hoursPerDay: hours[a.id] ?? a.hoursPerDay }));
@@ -96,12 +101,12 @@ export default function AppliancesPage() {
   }
   async function submit() {
     const parsed = parseDraft(draft!);
-    if (typeof parsed === "string") return setFormError(parsed);
+    if (typeof parsed === "string") return setFormError(t(parsed));
     try {
       await save(parsed);
       setDraft(null);
     } catch (e) {
-      setFormError(`Couldn't save: ${e instanceof Error ? e.message : e}`);
+      setFormError(t("common.couldntSave", { e: e instanceof Error ? e.message : String(e) }));
     }
   }
   const open = (d: Draft) => {
@@ -112,20 +117,20 @@ export default function AppliancesPage() {
   return (
     <>
       <div className="page-action">
-        <p>See which appliances use the most energy.</p>
+        <p>{t("ap.lead")}</p>
         <Button variant="lime" onClick={() => open(emptyDraft())}>
-          ＋ Add Appliance
+          {t("ap.add")}
         </Button>
       </div>
       <Card className="appliance-summary">
         <div>
-          <p>Estimated monthly units</p>
+          <p>{t("ap.monthlyUnits")}</p>
           <h2>
-            {num(total)} <small>units</small>
+            {num(total)} <small>{t("common.units")}</small>
           </h2>
         </div>
         <div>
-          <p>Estimated bill incl. taxes</p>
+          <p>{t("ap.billTaxes")}</p>
           <strong>{rs(bill.payable)}</strong>
         </div>
         <div className="donut-chart" aria-hidden>
@@ -142,10 +147,14 @@ export default function AppliancesPage() {
         <div className="legend">
           {top.map((r, i) => (
             <span key={r.id} style={{ color: SLICE_COLORS[i] }}>
-              ● {r.name} {Math.round(r.share * 100)}%
+              ● {appliance(r.name)} {Math.round(r.share * 100)}%
             </span>
           ))}
-          {otherShare > 0 && <span style={{ color: "#fff" }}>● Other {Math.round(otherShare * 100)}%</span>}
+          {otherShare > 0 && (
+            <span style={{ color: "#fff" }}>
+              ● {t("ap.other")} {Math.round(otherShare * 100)}%
+            </span>
+          )}
         </div>
       </Card>
 
@@ -153,36 +162,37 @@ export default function AppliancesPage() {
 
       {rows.length === 0 && (
         <div className="empty-state">
-          <h2>No appliances yet</h2>
-          <p>Add your AC, fans, fridge and motor to see who uses the most.</p>
+          <h2>{t("ap.none")}</h2>
+          <p>{t("ap.noneText")}</p>
         </div>
       )}
 
       <div className="appliance-grid">
         {rows.map((a, i) => (
-          <Card key={a.id} className={i % CARD_COLORS.length === 0 ? "dark-card appliance-card" : "appliance-card"} style={{ background: CARD_COLORS[i % CARD_COLORS.length] }}>
+          <Card
+            key={a.id}
+            className={i % CARD_COLORS.length === 0 ? "dark-card appliance-card" : "appliance-card"}
+            style={{ background: CARD_COLORS[i % CARD_COLORS.length] }}
+          >
             <div className="appliance-top">
               <i aria-hidden>{icon(a.name)}</i>
               <span>
-                <button
-                  aria-label={`Edit ${a.name}`}
-                  onClick={() => open({ id: a.id, ...presetDraft(a) })}
-                >
+                <button aria-label={t("ap.edit", { name: appliance(a.name) })} onClick={() => open({ id: a.id, ...presetDraft(a) })}>
                   ✎
                 </button>
-                <button aria-label={`Delete ${a.name}`} onClick={() => run((s) => s.deleteAppliance(a.id))}>
+                <button aria-label={t("ap.delete", { name: appliance(a.name) })} onClick={() => run((s) => s.deleteAppliance(a.id))}>
                   ×
                 </button>
               </span>
             </div>
             <h3>
-              {a.name} · {a.watts}W{a.quantity > 1 ? ` × ${a.quantity}` : ""}
+              {appliance(a.name)} · <span dir="ltr">{a.watts}W{a.quantity > 1 ? ` × ${a.quantity}` : ""}</span>
             </h3>
             <strong>
-              {a.units < 10 ? a.units.toFixed(1) : num(a.units)} units/month · {often(a.daysPerWeek)}
+              {t("ap.perMonth", { n: a.units < 10 ? a.units.toFixed(1) : num(a.units) })} · {often(a.daysPerWeek)}
             </strong>
             <label>
-              Hours per day <b>{a.hoursPerDay < 1 ? `${a.hoursPerDay * 60} min` : `${a.hoursPerDay}h`}</b>
+              {t("ap.hoursPerDay")} <b>{duration(a.hoursPerDay)}</b>
               <input
                 type="range"
                 min={0}
@@ -201,24 +211,24 @@ export default function AppliancesPage() {
 
       {cut && (
         <div className="tip-banner">
-          ♧ <b>Cut {cut.appliance.name} by {cut.hours} hr{cut.hours === 1 ? "" : "s"}/day</b> to get under 200 units.
+          ♧ <b>{t("ap.cut", { name: appliance(cut.appliance.name), n: cut.hours })}</b> {t("ap.cutRest")}
         </div>
       )}
       <p className="legal-note" style={{ marginTop: 16 }}>
-        Estimates assume 30 days of use. Estimate based on current NEPRA tariffs. Actual bill may vary.
+        {t("ap.note")} {t("common.legal")}
       </p>
 
       {draft && (
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setDraft(null)}>
           <div className="add-modal" role="dialog" aria-modal="true" aria-labelledby="add-title">
-            <button className="modal-close" onClick={() => setDraft(null)} aria-label="Close">
+            <button className="modal-close" onClick={() => setDraft(null)} aria-label={t("common.close")}>
               ×
             </button>
-            <h2 id="add-title">{draft.id ? "Edit appliance" : "Add an appliance"}</h2>
-            <p>We&apos;ll estimate its monthly energy use.</p>
+            <h2 id="add-title">{draft.id ? t("ap.editTitle") : t("ap.addTitle")}</h2>
+            <p>{t("ap.modalText")}</p>
             {!draft.id && (
               <label>
-                Appliance
+                {t("ap.appliance")}
                 <select
                   value={PRESETS.some((p) => p.name === draft.name) ? draft.name : "custom"}
                   onChange={(e) => {
@@ -227,44 +237,46 @@ export default function AppliancesPage() {
                   }}
                 >
                   {PRESETS.map((p) => (
-                    <option key={p.name}>{p.name}</option>
+                    <option key={p.name} value={p.name}>
+                      {appliance(p.name)}
+                    </option>
                   ))}
-                  <option value="custom">Other…</option>
+                  <option value="custom">{t("ap.otherOpt")}</option>
                 </select>
               </label>
             )}
             <div className="form-grid">
               <label className="full">
-                Name
-                <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+                {t("ap.name")}
+                <input value={appliance(draft.name)} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
               </label>
               <label>
-                Watts
+                {t("ap.watts")}
                 <input inputMode="decimal" value={draft.watts} onChange={(e) => setDraft({ ...draft, watts: e.target.value })} />
               </label>
               <label>
-                Quantity
+                {t("ap.qty")}
                 <input inputMode="numeric" value={draft.quantity} onChange={(e) => setDraft({ ...draft, quantity: e.target.value })} />
               </label>
               <label>
-                Hours each time it runs
+                {t("ap.hoursEach")}
                 <input inputMode="decimal" value={draft.hoursPerDay} onChange={(e) => setDraft({ ...draft, hoursPerDay: e.target.value })} />
               </label>
               <label>
-                Days per week
+                {t("ap.daysWeek")}
                 <select value={draft.daysPerWeek} onChange={(e) => setDraft({ ...draft, daysPerWeek: e.target.value })}>
                   {[7, 6, 5, 4, 3, 2, 1].map((n) => (
                     <option key={n} value={n}>
-                      {n === 7 ? "Every day" : `${n} day${n === 1 ? "" : "s"} a week`}
+                      {n === 7 ? t("ap.everyDay") : t("ap.nDays", { n })}
                     </option>
                   ))}
                 </select>
               </label>
-              <p className="form-hint full">Use 0.5 for 30 minutes. A fridge runs 24 hours but its compressor cycles, so its real use is often lower.</p>
+              <p className="form-hint full">{t("ap.hint")}</p>
             </div>
             {formError && <Notice tone="error">{formError}</Notice>}
             <Button className="full-button" onClick={submit}>
-              {draft.id ? "Save changes" : "Add Appliance"}
+              {draft.id ? t("ap.save") : t("ap.addBtn")}
             </Button>
           </div>
         </div>

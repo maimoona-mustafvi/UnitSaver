@@ -4,14 +4,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type DragEvent } from "react";
 import { useData } from "@/components/DataProvider";
+import { LanguageSwitch, useI18n } from "@/components/LanguageProvider";
 import { AIBadge, Button, Loading, Notice, StepBar, Unity } from "@/components/ui";
-import { addMonths, monthLabel, monthOf, todayISO } from "@/lib/dates";
-import { postImage } from "@/lib/image";
+import type { Key, Vars } from "@/i18n";
+import { addMonths, monthOf, todayISO } from "@/lib/dates";
+import { aiErrorKey, postImage } from "@/lib/image";
 import type { BillResult } from "@/lib/schemas";
 import type { LastBill, MeterType, MonthUnits } from "@/types";
 
 type Phase = "idle" | "reading" | "review" | "error";
 type Field = "billMonth" | "previousReading" | "presentReading" | "readingDate" | "meterType" | "history";
+type Message = { key: Key; vars?: Vars };
 
 interface Form {
   billMonth: string;
@@ -69,21 +72,21 @@ function fromAI(r: BillResult): { form: Form; ai: Set<Field> } {
 const int = (s: string) => (/^\d+$/.test(s.trim()) ? Number(s.trim()) : NaN);
 
 /** Turns the form into what we store, or an error message. Manual mode derives the bill month and previous reading. */
-function toSave(form: Form, manual: boolean): { lastBill: LastBill; history: MonthUnits[] } | string {
+function toSave(form: Form, manual: boolean, month: (ym: string) => string): { lastBill: LastBill; history: MonthUnits[] } | Message {
   const present = int(form.presentReading);
-  if (Number.isNaN(present)) return "Enter your last meter reading (whole number).";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(form.readingDate) || form.readingDate > todayISO()) return "Enter a valid reading date (not in the future).";
+  if (Number.isNaN(present)) return { key: "setup.err.present" };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(form.readingDate) || form.readingDate > todayISO()) return { key: "setup.err.date" };
   const billMonth = manual ? monthOf(form.readingDate) : form.billMonth;
-  if (!/^\d{4}-\d{2}$/.test(billMonth)) return "Enter the bill month as YYYY-MM.";
+  if (!/^\d{4}-\d{2}$/.test(billMonth)) return { key: "setup.err.month" };
   const rows = form.history.map((h, i) => ({
     month: manual ? addMonths(billMonth, i - form.history.length + 1) : h.month,
     units: h.units.trim() === "" ? null : int(h.units),
   }));
-  if (rows.some((r) => Number.isNaN(r.units))) return "Monthly units must be whole numbers.";
+  if (rows.some((r) => Number.isNaN(r.units))) return { key: "setup.err.units" };
   const lastUnits = rows[rows.length - 1].units;
   const previous = manual ? (lastUnits === null ? NaN : present - lastUnits) : int(form.previousReading);
-  if (Number.isNaN(previous)) return manual ? `Enter units for ${monthLabel(billMonth)} (your last bill).` : "Enter the previous reading.";
-  if (previous > present) return "The previous reading can't be higher than the present reading.";
+  if (Number.isNaN(previous)) return manual ? { key: "setup.err.lastUnits", vars: { m: month(billMonth) } } : { key: "setup.err.prev" };
+  if (previous > present) return { key: "setup.err.order" };
   const history = rows.filter((r): r is MonthUnits => r.units !== null && r.month !== billMonth);
   history.push({ month: billMonth, units: present - previous });
   return { lastBill: { month: billMonth, previousReading: previous, presentReading: present, readingDate: form.readingDate }, history };
@@ -92,12 +95,14 @@ function toSave(form: Form, manual: boolean): { lastBill: LastBill; history: Mon
 export default function SetupPage() {
   const router = useRouter();
   const { data, run, loadDemo, loading } = useData();
+  const { t, month } = useI18n();
   const [manual, setManual] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [form, setForm] = useState<Form>(blankForm);
   const [ai, setAi] = useState<Set<Field>>(new Set());
   const [meta, setMeta] = useState<{ confidence?: string; tariff?: string | null }>({});
-  const [error, setError] = useState("");
+  const [error, setError] = useState<Message | null>(null);
+  const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
 
   const set = (k: Field, v: Form[Field]) => {
@@ -110,7 +115,7 @@ export default function SetupPage() {
   async function readBill(file?: File) {
     if (!file) return;
     setPhase("reading");
-    setError("");
+    setError(null);
     try {
       const result = await postImage<BillResult>("/api/read-bill", file);
       const next = fromAI(result);
@@ -119,14 +124,14 @@ export default function SetupPage() {
       setMeta({ confidence: result.confidence, tariff: result.tariff });
       setPhase("review");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "We couldn't read it clearly. Try again or enter manually.");
+      setError({ key: aiErrorKey(e) });
       setPhase("error");
     }
   }
 
   function switchTab(toManual: boolean) {
     setManual(toManual);
-    setError("");
+    setError(null);
     if (toManual) {
       setForm((f) => ({ ...f, history: f.history.slice(-6) }));
     } else if (phase !== "review") {
@@ -135,10 +140,11 @@ export default function SetupPage() {
   }
 
   async function save() {
-    const out = toSave(form, manual);
-    if (typeof out === "string") return setError(out);
+    const out = toSave(form, manual, month);
+    if ("key" in out) return setError(out);
     setSaving(true);
-    setError("");
+    setError(null);
+    setSaveError("");
     try {
       await run((s) =>
         s.saveProfile({
@@ -148,7 +154,7 @@ export default function SetupPage() {
       );
       router.push("/reading");
     } catch (e) {
-      setError(`Couldn't save: ${e instanceof Error ? e.message : e}`);
+      setSaveError(t("common.couldntSave", { e: e instanceof Error ? e.message : String(e) }));
       setSaving(false);
     }
   }
@@ -164,47 +170,51 @@ export default function SetupPage() {
     readBill(e.dataTransfer.files[0]);
   };
 
-  const label = (text: string, field: Field) => (
+  const label = (key: Key, field: Field) => (
     <span className="field-label">
-      {text} {ai.has(field) && <AIBadge />}
+      {t(key)} {ai.has(field) && <AIBadge />}
     </span>
   );
   const showForm = manual || phase === "review";
   const recent = form.history.slice(-6);
   const maxUnits = Math.max(1, ...recent.map((h) => int(h.units) || 0));
+  const errorText = error ? t(error.key, error.vars) : "";
 
   return (
     <div className="onboarding-page">
-      <Link className="back-link" href={data?.lastBill ? "/dashboard" : "/"}>
-        ← Back
-      </Link>
+      <div className="page-top">
+        <Link className="back-link" href={data?.lastBill ? "/dashboard" : "/"}>
+          {t("common.back")}
+        </Link>
+        <LanguageSwitch />
+      </div>
       <div className="onboarding-layout">
         <aside className="onboarding-art">
-          <div className="mini-bubble">Your data stays yours.</div>
+          <div className="mini-bubble">{t("setup.bubble")}</div>
           <Unity mood={phase === "review" ? "celebrate" : phase === "error" ? "worried" : "thinking"} size={180} />
         </aside>
         <main className="setup-card">
           <StepBar step={1} />
-          <h1>Add last month&apos;s bill</h1>
-          <p className="subtle">Upload a photo of your bill. We&apos;ll read your last meter reading and 12-month history.</p>
+          <h1>{t("setup.title")}</h1>
+          <p className="subtle">{t("setup.subtitle")}</p>
           <div className="segmented" role="tablist">
             <button role="tab" aria-selected={!manual} className={!manual ? "selected" : ""} onClick={() => switchTab(false)}>
-              Upload Bill Photo
+              {t("setup.tabUpload")}
             </button>
             <button role="tab" aria-selected={manual} className={manual ? "selected" : ""} onClick={() => switchTab(true)}>
-              Enter Manually
+              {t("setup.tabManual")}
             </button>
           </div>
 
-          {!manual && phase === "reading" && <Loading label="Reading your bill…" />}
+          {!manual && phase === "reading" && <Loading label={t("setup.reading")} />}
 
           {!manual && (phase === "idle" || phase === "error") && (
             <>
               {phase === "error" && (
                 <Notice tone="error">
-                  {error}{" "}
+                  {errorText}{" "}
                   <button className="link-button" onClick={() => switchTab(true)}>
-                    Enter manually
+                    {t("setup.enterManually")}
                   </button>
                 </Notice>
               )}
@@ -219,9 +229,9 @@ export default function SetupPage() {
                   }}
                 />
                 <span aria-hidden>↑</span>
-                <b>{phase === "error" ? "Try another photo" : "Drop bill photo or click to upload"}</b>
-                <small>JPG, PNG or PDF · max 10MB</small>
-                <em>Take Photo</em>
+                <b>{phase === "error" ? t("setup.tryAnother") : t("setup.drop")}</b>
+                <small>{t("setup.formats")}</small>
+                <em>{t("setup.takePhoto")}</em>
               </label>
             </>
           )}
@@ -230,58 +240,61 @@ export default function SetupPage() {
             <div className={manual ? "" : "result-preview"}>
               {!manual && (
                 <div className="result-title" style={{ marginBottom: 14 }}>
-                  <b>Bill read – please check</b>
+                  <b>{t("setup.readCheck")}</b>
                   <AIBadge />
                 </div>
               )}
-              {!manual && meta.confidence === "low" && <Notice>Low confidence – double-check every value.</Notice>}
-              {!manual && meta.tariff && !/^A-?1/i.test(meta.tariff) && (
-                <Notice>Tariff {meta.tariff} detected. UnitSaver estimates residential (A-1) bills only.</Notice>
-              )}
+              {!manual && meta.confidence === "low" && <Notice>{t("setup.lowConf")}</Notice>}
+              {!manual && meta.tariff && !/^A-?1/i.test(meta.tariff) && <Notice>{t("setup.tariff", { t: meta.tariff })}</Notice>}
               <div className="form-grid">
                 {!manual && (
                   <label>
-                    {label("Bill month", "billMonth")}
+                    {label("setup.billMonth", "billMonth")}
                     <input type="month" value={form.billMonth} onChange={(e) => set("billMonth", e.target.value)} />
                   </label>
                 )}
                 {!manual && (
                   <label>
-                    {label("Previous reading", "previousReading")}
+                    {label("setup.prev", "previousReading")}
                     <input inputMode="numeric" value={form.previousReading} onChange={(e) => set("previousReading", e.target.value)} />
                   </label>
                 )}
                 <label>
-                  {label(manual ? "Last meter reading" : "Present reading", "presentReading")}
-                  <input inputMode="numeric" value={form.presentReading} placeholder="e.g. 51306" onChange={(e) => set("presentReading", e.target.value)} />
+                  {label(manual ? "setup.lastReading" : "setup.present", "presentReading")}
+                  <input
+                    inputMode="numeric"
+                    value={form.presentReading}
+                    placeholder={t("setup.placeholder")}
+                    onChange={(e) => set("presentReading", e.target.value)}
+                  />
                 </label>
                 <label>
-                  {label("Reading date", "readingDate")}
+                  {label("setup.date", "readingDate")}
                   <input type="date" value={form.readingDate} max={todayISO()} onChange={(e) => set("readingDate", e.target.value)} />
                 </label>
                 <label>
-                  {label("Meter type", "meterType")}
+                  {label("setup.meterType", "meterType")}
                   <select value={form.meterType} onChange={(e) => set("meterType", e.target.value as MeterType)}>
-                    <option value="normal">Normal</option>
-                    <option value="tou">TOU (peak / off-peak)</option>
+                    <option value="normal">{t("meter.normal")}</option>
+                    <option value="tou">{t("meter.tou")}</option>
                   </select>
                 </label>
                 <div className="full">
                   <span className="field-label" style={{ fontSize: 12, fontWeight: 700 }}>
-                    {manual ? "Last 6 months' units" : "Monthly units"} {ai.has("history") && <AIBadge />}
+                    {manual ? t("setup.last6") : t("setup.monthly")} {ai.has("history") && <AIBadge />}
                   </span>
                   <div className="unit-inputs">
                     {form.history.map((h, i) => {
-                      const month = manual ? addMonths(monthOf(form.readingDate || todayISO()), i - form.history.length + 1) : h.month;
+                      const m = manual ? addMonths(monthOf(form.readingDate || todayISO()), i - form.history.length + 1) : h.month;
                       return (
                         <label key={i}>
-                          <small>{monthLabel(month)}</small>
-                          <input inputMode="numeric" aria-label={`Units for ${monthLabel(month, true)}`} value={h.units} onChange={(e) => setUnits(i, e.target.value)} />
+                          <small>{month(m)}</small>
+                          <input inputMode="numeric" aria-label={t("setup.unitsFor", { m: month(m, true) })} value={h.units} onChange={(e) => setUnits(i, e.target.value)} />
                         </label>
                       );
                     })}
                   </div>
-                  {manual && <p className="form-hint">The last box is your last bill&apos;s month. Leave unknown months empty.</p>}
+                  {manual && <p className="form-hint">{t("setup.hint")}</p>}
                 </div>
               </div>
               {!manual && (
@@ -289,29 +302,30 @@ export default function SetupPage() {
                   {recent.map((h) => (
                     <div key={h.month}>
                       <i style={{ height: `${((int(h.units) || 0) / maxUnits) * 70}px`, background: (int(h.units) || 0) > 200 ? "var(--pink)" : undefined }} />
-                      <small>{monthLabel(h.month)}</small>
+                      <small>{month(h.month)}</small>
                     </div>
                   ))}
                 </div>
               )}
               {!manual && (
                 <button className="link-button" style={{ marginTop: 12 }} onClick={() => setPhase("idle")}>
-                  Upload a different photo
+                  {t("setup.different")}
                 </button>
               )}
             </div>
           )}
 
-          {error && phase !== "error" && <Notice tone="error">{error}</Notice>}
+          {error && phase !== "error" && <Notice tone="error">{errorText}</Notice>}
+          {saveError && <Notice tone="error">{saveError}</Notice>}
           {showForm && (
             <Button onClick={save} className="full-button" disabled={saving || loading}>
-              {saving ? "Saving…" : "Continue →"}
+              {saving ? t("common.saving") : t("setup.continue")}
             </Button>
           )}
           <button className="link-button demo-link" onClick={demo} disabled={saving || loading}>
-            No bill handy? Load demo data
+            {t("setup.demo")}
           </button>
-          <p className="privacy">▣ Your bill stays private. Photos are not stored, and personal details are never read.</p>
+          <p className="privacy">{t("setup.privacy")}</p>
         </main>
       </div>
     </div>
