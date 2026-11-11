@@ -3,6 +3,7 @@ import tariffs from "@/config/tariffs.json";
 import { demoData, REFERENCE_HISTORY } from "@/lib/demo";
 import {
   applianceMonthlyUnits,
+  appliancePeriod,
   applianceTotals,
   billStatus,
   calculateBill,
@@ -122,6 +123,22 @@ describe("co2 + appliances", () => {
     expect(total).toBe(315);
     expect(rows[0].name).toBe("AC");
     expect(hoursToCut(list)).toMatchObject({ hours: 3 }); // 45 units/hour/month
+  });
+  it("spreads weekly use and splits the cycle into so-far and whole-month", () => {
+    const iron = { id: "i", name: "Iron", watts: 1000, quantity: 1, hoursPerDay: 1, daysPerWeek: 1 };
+    expect(applianceMonthlyUnits(iron)).toBeCloseTo(30 / 7); // 1 kWh a week ≈ 4.29 units/month
+    const list = [
+      { id: "f", name: "Fridge", watts: 150, quantity: 1, hoursPerDay: 24 }, // 3.6/day
+      { id: "b", name: "LED Bulb", watts: 12, quantity: 4, hoursPerDay: 7 }, // 0.336/day
+      { id: "m", name: "Water Motor", watts: 750, quantity: 1, hoursPerDay: 0.5 }, // 0.375/day
+      iron,
+    ];
+    const p = appliancePeriod(list, 15);
+    expect(p.dailyUnits).toBeCloseTo(3.6 + 0.336 + 0.375 + 1 / 7);
+    expect(p.unitsSoFar).toBeCloseTo(p.dailyUnits * 15);
+    expect(p.monthUnits).toBeCloseTo(p.dailyUnits * 30);
+    expect(p.daysLeft).toBe(15);
+    expect(appliancePeriod(list, 45).daysSoFar).toBe(30); // clamped to the cycle
   });
 });
 

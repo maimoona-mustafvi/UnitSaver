@@ -32,7 +32,9 @@ export const tipsRequestSchema = z.object({
   status: z.enum(["protected", "nonProtected"]),
   meterType: z.enum(["normal", "tou"]),
   appliances: z
-    .array(z.object({ name: z.string().max(60), watts: z.number(), quantity: z.number(), hoursPerDay: z.number() }))
+    .array(
+      z.object({ name: z.string().max(60), watts: z.number(), quantity: z.number(), hoursPerDay: z.number(), daysPerWeek: z.number().min(0).max(7).optional() }),
+    )
     .max(30),
 });
 export type TipsRequest = z.infer<typeof tipsRequestSchema>;

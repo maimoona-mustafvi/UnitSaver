@@ -3,21 +3,23 @@
 import { useState } from "react";
 import { Cell, Pie, PieChart } from "recharts";
 import { useData } from "@/components/DataProvider";
+import { PeriodEstimate } from "@/components/PeriodEstimate";
 import { SetupPrompt } from "@/components/SetupPrompt";
 import { Button, C, Card, Loading, Notice, num, rs } from "@/components/ui";
 import { applianceTotals, billStatus, calculateBill, hoursToCut } from "@/lib/billing";
 import type { NewAppliance } from "@/lib/db";
 import type { Appliance } from "@/types";
 
-const PRESETS: { name: string; watts: number; hoursPerDay: number }[] = [
+type Preset = { name: string; watts: number; hoursPerDay: number; quantity?: number; daysPerWeek?: number };
+const PRESETS: Preset[] = [
+  { name: "Fridge", watts: 150, hoursPerDay: 24 },
+  { name: "LED Bulb", watts: 12, hoursPerDay: 7, quantity: 4 },
+  { name: "Water Motor", watts: 750, hoursPerDay: 0.5 },
+  { name: "Iron", watts: 1000, hoursPerDay: 1, daysPerWeek: 1 },
+  { name: "Ceiling Fan", watts: 75, hoursPerDay: 12 },
   { name: "AC 1.5 Ton", watts: 1500, hoursPerDay: 6 },
   { name: "Inverter AC 1.5 Ton", watts: 1000, hoursPerDay: 6 },
-  { name: "Ceiling Fan", watts: 75, hoursPerDay: 12 },
-  { name: "Fridge", watts: 150, hoursPerDay: 10 },
-  { name: "Water Motor", watts: 750, hoursPerDay: 1 },
-  { name: "Iron", watts: 1000, hoursPerDay: 0.5 },
-  { name: "Washing Machine", watts: 500, hoursPerDay: 1 },
-  { name: "LED Bulb", watts: 12, hoursPerDay: 6 },
+  { name: "Washing Machine", watts: 500, hoursPerDay: 1, daysPerWeek: 2 },
   { name: "Television", watts: 100, hoursPerDay: 5 },
   { name: "Microwave", watts: 1200, hoursPerDay: 0.25 },
   { name: "Computer / Laptop", watts: 150, hoursPerDay: 4 },
@@ -37,20 +39,32 @@ const icon = (name: string) => ICONS.find(([re]) => re.test(name))?.[1] ?? "⌁"
 const CARD_COLORS = [C.blue, C.lime, C.pink, C.pale, C.mint];
 const SLICE_COLORS = [C.lime, C.pink, C.mint, C.pale, "#ffffff"];
 
-type Draft = { id?: string; name: string; watts: string; quantity: string; hoursPerDay: string };
-const emptyDraft = (): Draft => ({ name: PRESETS[0].name, watts: String(PRESETS[0].watts), quantity: "1", hoursPerDay: String(PRESETS[0].hoursPerDay) });
+type Draft = { id?: string; name: string; watts: string; quantity: string; hoursPerDay: string; daysPerWeek: string };
+const presetDraft = (p: Preset) => ({
+  name: p.name,
+  watts: String(p.watts),
+  quantity: String(p.quantity ?? 1),
+  hoursPerDay: String(p.hoursPerDay),
+  daysPerWeek: String(p.daysPerWeek ?? 7),
+});
+const emptyDraft = (): Draft => presetDraft(PRESETS[0]);
+const often = (days = 7) => (days >= 7 ? "daily" : `${days} day${days === 1 ? "" : "s"}/week`);
 
 function parseDraft(d: Draft): NewAppliance | string {
-  const watts = Number(d.watts), quantity = Number(d.quantity), hoursPerDay = Number(d.hoursPerDay);
+  const watts = Number(d.watts), quantity = Number(d.quantity), hoursPerDay = Number(d.hoursPerDay), daysPerWeek = Number(d.daysPerWeek);
   if (!d.name.trim()) return "Give the appliance a name.";
   if (!(watts > 0 && watts <= 10000)) return "Watts must be between 1 and 10,000.";
   if (!(Number.isInteger(quantity) && quantity >= 1 && quantity <= 50)) return "Quantity must be a whole number from 1 to 50.";
-  if (!(hoursPerDay >= 0 && hoursPerDay <= 24)) return "Hours per day must be between 0 and 24.";
-  return { id: d.id, name: d.name.trim().slice(0, 60), watts, quantity, hoursPerDay };
+  if (!(hoursPerDay >= 0 && hoursPerDay <= 24)) return "Hours per day must be between 0 and 24 (use 0.5 for 30 minutes).";
+  if (!(Number.isInteger(daysPerWeek) && daysPerWeek >= 1 && daysPerWeek <= 7)) return "Days per week must be a whole number from 1 to 7.";
+  return { id: d.id, name: d.name.trim().slice(0, 60), watts, quantity, hoursPerDay, daysPerWeek };
 }
 
+const toAppliance = ({ id, name, watts, quantity, hoursPerDay, daysPerWeek }: Appliance): Appliance =>
+  ({ id, name, watts, quantity, hoursPerDay, ...(daysPerWeek !== undefined && { daysPerWeek }) });
+
 export default function AppliancesPage() {
-  const { loading, data, run } = useData();
+  const { loading, data, run, summary } = useData();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [formError, setFormError] = useState("");
   const [hours, setHours] = useState<Record<string, number>>({});
@@ -60,7 +74,13 @@ export default function AppliancesPage() {
   // Slider values show instantly; they are saved when the user lets go.
   const list = data.appliances.map((a) => ({ ...a, hoursPerDay: hours[a.id] ?? a.hoursPerDay }));
   const { rows, total } = applianceTotals(list);
-  const bill = calculateBill({ units: total, status: billStatus(data.history, total), isFiler: data.settings.isFiler });
+  // Same FPA reference month as the metered estimate, so this matches the "Whole month" figure below.
+  const bill = calculateBill({
+    units: total,
+    status: billStatus(data.history, total),
+    fpaReferenceUnits: summary?.estimate.fpaReferenceUnits ?? total,
+    isFiler: data.settings.isFiler,
+  });
   const cut = hoursToCut(list);
   const top = rows.slice(0, 3);
   const otherShare = rows.slice(3).reduce((s, r) => s + r.share, 0);
@@ -69,8 +89,9 @@ export default function AppliancesPage() {
   const save = (a: NewAppliance) => run((s) => s.saveAppliance(a));
   async function commitHours(a: Appliance) {
     const h = hours[a.id];
-    if (h === undefined || h === data!.appliances.find((x) => x.id === a.id)?.hoursPerDay) return;
-    await save({ ...a, hoursPerDay: h });
+    const saved = data!.appliances.find((x) => x.id === a.id);
+    if (h === undefined || !saved || h === saved.hoursPerDay) return;
+    await save({ ...toAppliance(saved), hoursPerDay: h });
     setHours(({ [a.id]: _done, ...rest }) => rest);
   }
   async function submit() {
@@ -128,6 +149,8 @@ export default function AppliancesPage() {
         </div>
       </Card>
 
+      {data.appliances.length > 0 && <PeriodEstimate />}
+
       {rows.length === 0 && (
         <div className="empty-state">
           <h2>No appliances yet</h2>
@@ -143,7 +166,7 @@ export default function AppliancesPage() {
               <span>
                 <button
                   aria-label={`Edit ${a.name}`}
-                  onClick={() => open({ id: a.id, name: a.name, watts: String(a.watts), quantity: String(a.quantity), hoursPerDay: String(a.hoursPerDay) })}
+                  onClick={() => open({ id: a.id, ...presetDraft(a) })}
                 >
                   ✎
                 </button>
@@ -155,9 +178,11 @@ export default function AppliancesPage() {
             <h3>
               {a.name} · {a.watts}W{a.quantity > 1 ? ` × ${a.quantity}` : ""}
             </h3>
-            <strong>{num(a.units)} units/month</strong>
+            <strong>
+              {a.units < 10 ? a.units.toFixed(1) : num(a.units)} units/month · {often(a.daysPerWeek)}
+            </strong>
             <label>
-              Hours per day <b>{a.hoursPerDay}h</b>
+              Hours per day <b>{a.hoursPerDay < 1 ? `${a.hoursPerDay * 60} min` : `${a.hoursPerDay}h`}</b>
               <input
                 type="range"
                 min={0}
@@ -198,7 +223,7 @@ export default function AppliancesPage() {
                   value={PRESETS.some((p) => p.name === draft.name) ? draft.name : "custom"}
                   onChange={(e) => {
                     const p = PRESETS.find((x) => x.name === e.target.value);
-                    setDraft({ ...draft, ...(p ? { name: p.name, watts: String(p.watts), hoursPerDay: String(p.hoursPerDay) } : { name: "" }) });
+                    setDraft({ ...draft, ...(p ? presetDraft(p) : { name: "" }) });
                   }}
                 >
                   {PRESETS.map((p) => (
@@ -221,10 +246,21 @@ export default function AppliancesPage() {
                 Quantity
                 <input inputMode="numeric" value={draft.quantity} onChange={(e) => setDraft({ ...draft, quantity: e.target.value })} />
               </label>
-              <label className="full">
-                Hours per day
+              <label>
+                Hours each time it runs
                 <input inputMode="decimal" value={draft.hoursPerDay} onChange={(e) => setDraft({ ...draft, hoursPerDay: e.target.value })} />
               </label>
+              <label>
+                Days per week
+                <select value={draft.daysPerWeek} onChange={(e) => setDraft({ ...draft, daysPerWeek: e.target.value })}>
+                  {[7, 6, 5, 4, 3, 2, 1].map((n) => (
+                    <option key={n} value={n}>
+                      {n === 7 ? "Every day" : `${n} day${n === 1 ? "" : "s"} a week`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="form-hint full">Use 0.5 for 30 minutes. A fridge runs 24 hours but its compressor cycles, so its real use is often lower.</p>
             </div>
             {formError && <Notice tone="error">{formError}</Notice>}
             <Button className="full-button" onClick={submit}>

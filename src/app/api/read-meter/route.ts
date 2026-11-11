@@ -1,7 +1,7 @@
 import { errorResponse, fileFromRequest, generateJson } from "@/lib/gemini";
 import { meterResultSchema } from "@/lib/schemas";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 const PROMPT = `Read the electricity meter in this photo (Pakistani digital or mechanical kWh meter).
 - reading: the cumulative kWh number on the display as an integer (ignore decimals, the red last drum and any other screens such as date, time, voltage or MDI). null if not clearly visible.

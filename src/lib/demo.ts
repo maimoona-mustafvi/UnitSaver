@@ -20,12 +20,12 @@ export function demoData(today = todayISO()): UserData {
     lastBill: { month: billMonth, ...REFERENCE_BILL, readingDate },
     readings: [{ id: "demo-1", reading: 51448, date: today, units: 142, source: "manual" }],
     appliances: [
-      { id: "demo-ac", name: "AC 1.5 Ton", watts: 1500, quantity: 1, hoursPerDay: 4 },
+      { id: "demo-fridge", name: "Fridge", watts: 150, quantity: 1, hoursPerDay: 24 },
+      { id: "demo-led", name: "LED Bulb", watts: 12, quantity: 4, hoursPerDay: 7 },
+      { id: "demo-motor", name: "Water Motor", watts: 750, quantity: 1, hoursPerDay: 0.5 },
+      { id: "demo-iron", name: "Iron", watts: 1000, quantity: 1, hoursPerDay: 1, daysPerWeek: 1 },
       { id: "demo-fan", name: "Ceiling Fan", watts: 75, quantity: 3, hoursPerDay: 10 },
-      { id: "demo-fridge", name: "Fridge", watts: 150, quantity: 1, hoursPerDay: 10 },
-      { id: "demo-motor", name: "Water Motor", watts: 750, quantity: 1, hoursPerDay: 1 },
-      { id: "demo-iron", name: "Iron", watts: 1000, quantity: 1, hoursPerDay: 0.5 },
-      { id: "demo-led", name: "LED Bulb", watts: 12, quantity: 6, hoursPerDay: 6 },
+      { id: "demo-ac", name: "AC 1.5 Ton", watts: 1500, quantity: 1, hoursPerDay: 4 },
     ],
   };
 }

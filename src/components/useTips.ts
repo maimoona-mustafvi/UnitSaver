@@ -20,21 +20,24 @@ function fetchTips(body: TipsRequest) {
   return cache.get(key)!;
 }
 
-export function useTips() {
+/** Tips for the metered cycle by default; pass `override` to get tips for another projection (e.g. the appliance estimate). */
+export function useTips(override?: TipsRequest | null) {
   const { data, summary } = useData();
   const [state, setState] = useState<{ key?: string; result?: TipsResponse; error?: boolean }>({});
 
   const body: TipsRequest | null =
-    data && summary?.hasReading
-      ? {
-          unitsSoFar: summary.unitsSoFar,
-          daysLeft: summary.daysLeft,
-          predictedUnits: summary.prediction.predictedUnits,
-          status: summary.status.isProtected ? "protected" : "nonProtected",
-          meterType: data.settings.meterType,
-          appliances: data.appliances.map(({ name, watts, quantity, hoursPerDay }) => ({ name, watts, quantity, hoursPerDay })),
-        }
-      : null;
+    override !== undefined
+      ? override
+      : data && summary?.hasReading
+        ? {
+            unitsSoFar: summary.unitsSoFar,
+            daysLeft: summary.daysLeft,
+            predictedUnits: summary.prediction.predictedUnits,
+            status: summary.status.isProtected ? "protected" : "nonProtected",
+            meterType: data.settings.meterType,
+            appliances: data.appliances.map(({ name, watts, quantity, hoursPerDay, daysPerWeek }) => ({ name, watts, quantity, hoursPerDay, daysPerWeek })),
+          }
+        : null;
   const key = body ? JSON.stringify(body) : undefined;
 
   useEffect(() => {

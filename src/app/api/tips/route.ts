@@ -12,13 +12,15 @@ export async function POST(req: Request) {
   const prompt = `You are UnitSaver, a friendly energy coach for Pakistani households (IESCO/NEPRA tariffs).
 Write exactly 3 short, specific, actionable tips (max 20 words each) to cut electricity use this billing cycle.
 Facts (computed, trust them): ${JSON.stringify(input)}
+- "predictedUnits" is the projected total for the whole month if usage continues; "daysPerWeek" is how many days a week an appliance runs (missing = every day).
 - "status" is the NEPRA protected-slab status; staying at or below 200 units for 6 months keeps or regains protection.
 - Mention concrete appliances from the list and numbers (hours, units) where possible.
+- Never suggest something the user already does (e.g. ironing once a week when daysPerWeek is already 1).
 - ${input.meterType === "tou" ? "This is a TOU meter: one tip may shift heavy loads out of peak hours." : "This is NOT a TOU meter: do NOT give any peak-hour or time-of-use advice."}
 - No greetings, no markdown.`;
 
   try {
-    const { tips } = await generateJson(tipsResultSchema, prompt, { temperature: 0.6 });
+    const { tips } = await generateJson(tipsResultSchema, prompt, { temperature: 0.6, timeoutMs: 10_000 });
     const clean = filterTips(tips, input.meterType).slice(0, 3);
     if (clean.length) return Response.json({ tips: clean, source: "ai" } satisfies TipsResponse);
   } catch (e) {

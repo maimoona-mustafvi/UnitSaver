@@ -40,6 +40,8 @@ export interface Appliance {
   watts: number;
   quantity: number;
   hoursPerDay: number;
+  /** Days a week it runs (e.g. iron once a week = 1). Missing on older records = every day. */
+  daysPerWeek?: number;
 }
 
 export interface UserData {

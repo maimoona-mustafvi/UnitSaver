@@ -50,7 +50,7 @@ Most families only find out when the bill arrives. Bills are also hard to read: 
 
 | Where | Model / service | What it does |
 |---|---|---|
-| `/api/read-bill` | Gemini 3.8 Flash (`GEMINI_MODEL`, default `gemini-3.8-flash`) | Reads a bill photo or PDF into structured JSON (no names, addresses, CNIC or reference numbers). |
+| `/api/read-bill` | Gemini 3.5 Flash (`GEMINI_MODEL`, default `gemini-3.5-flash`) | Reads a bill photo or PDF into structured JSON (no names, addresses, CNIC or reference numbers). |
 | `/api/read-meter` | Gemini Flash | Reads the kWh digits from a meter photo, with a confidence level. |
 | `/api/tips` | Gemini Flash | Writes 3 short, personalised saving tips. |
 | Auth / DB | Firebase Anonymous Auth, Cloud Firestore | Per-device anonymous account and data. |
@@ -81,7 +81,7 @@ pnpm dev                     # http://localhost:3000
 | Variable | Where to get it |
 |---|---|
 | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey). Server-only. |
-| `GEMINI_MODEL` | Optional. Defaults to `gemini-3.8-flash` (the `gemini-flash-latest` alias and `gemini-2.5-flash` are not available to new API keys). |
+| `GEMINI_MODEL` | Optional. Defaults to `gemini-3.5-flash`: it reads bills as accurately as 3.8 Flash and responds in seconds, while 3.8 Flash sometimes took minutes in testing. `gemini-flash-latest` and `gemini-2.5-flash` are not available to new keys. Calls time out (10 s for tips, 25 s for photos). If the model is busy (503/429) or times out, the call is retried once on `GEMINI_FALLBACK_MODEL` (default `gemini-3.5-flash-lite`); after that tips use rule-based fallbacks and photo reads offer manual entry. |
 | `NEXT_PUBLIC_FIREBASE_*` | Firebase console → Project settings → Your apps → Web app config. |
 
 Firebase console steps:
